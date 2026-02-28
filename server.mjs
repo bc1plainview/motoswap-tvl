@@ -1321,9 +1321,9 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
+  if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/motoscope.html' || url.pathname === '/motoscope')) {
     try {
-      const html = await readFile(join(__dirname, 'index.html'), 'utf8');
+      const html = await readFile(join(__dirname, 'motoscope.html'), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
     } catch (e) {

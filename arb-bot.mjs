@@ -1175,14 +1175,14 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
   // ── Serve UI ──
-  if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/arb-ui.html')) {
+  if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html')) {
     try {
-      const html = await readFile(join(__dirname, 'arb-ui.html'), 'utf8');
+      const html = await readFile(join(__dirname, 'index.html'), 'utf8');
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(html);
     } catch (e) {
       res.writeHead(500, { 'Content-Type': 'text/plain' });
-      res.end('Failed to read arb-ui.html: ' + e.message);
+      res.end('Failed to read index.html: ' + e.message);
     }
     return;
   }
