@@ -853,7 +853,7 @@ td, input[type="number"] {
 
   <!-- Footer -->
   <div class="footer">
-    MotoArb &middot; Precision Arbitrage on Bitcoin L1 &middot; Powered by MotoSwap on OPNet
+    MotoArb &middot; <a href="https://x.com/bc1plainview" target="_blank" rel="noopener" style="color:var(--text-muted);text-decoration:none;border-bottom:1px solid rgba(160,160,184,0.15);">@bc1plainview</a> &middot; <a href="https://vibecode.finance" target="_blank" rel="noopener" style="color:var(--text-muted);text-decoration:none;border-bottom:1px solid rgba(160,160,184,0.15);">vibecode.finance</a> &middot; <a href="https://opnet.org" target="_blank" rel="noopener" style="color:var(--text-muted);text-decoration:none;border-bottom:1px solid rgba(160,160,184,0.15);">OPNet</a> &middot; <a href="https://motoswap.org" target="_blank" rel="noopener" style="color:var(--text-muted);text-decoration:none;border-bottom:1px solid rgba(160,160,184,0.15);">MotoSwap</a>
   </div>
 </div>
 
@@ -1499,6 +1499,7 @@ function render() {
     renderTradeHistory(),
     renderStrategy(),
     isDemoMode ? '' : renderConfig(), // Show config at bottom when connected
+    renderDannyNote(),
   ];
   app.innerHTML = sections.join('');
 
@@ -2627,6 +2628,49 @@ function renderConfig() {
         <label>Auto-Execute</label>
         <div class="toggle-switch ${c.autoMode?'active':''}" onclick="this.classList.toggle('active');updateConfig('autoMode', this.classList.contains('active'))"></div>
       </div>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SECTION: DANNY'S NOTE + LINKS
+// ══════════════════════════════════════════════════════════════════════════════
+function renderDannyNote() {
+  return `
+  <div class="section reveal">
+    <div class="card" style="padding:28px 28px 24px;border-color:rgba(168,85,247,0.15);background:linear-gradient(135deg, var(--bg-card), rgba(123,47,190,0.03));">
+      <div style="font-size:1.1rem;font-weight:800;color:var(--text-primary);margin-bottom:16px;">yo</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.8;max-width:640px;">
+        this started as a tvl dashboard and turned into an arb bot when i actually looked at the motoswap pool data for the first time. nobody's keeping the pools balanced so there's free money sitting there. pool maintenance.
+        <br><br>
+        i built this + 4 other working dapps in a 6 hour stream on a brand new mac mini. no code written by me. just claude code and the opnet bob mcp. i'm not a dev and i never have been. but that doesn't matter anymore.
+        <br><br>
+        this is the greatest time in history to be an idea guy. ideas literally come to life in front of your eyes with this shit. grab claude code, connect the mcp, and build something on bitcoin. enter the contest. beat the 5 things i made.
+      </div>
+      <div style="margin-top:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <span style="font-weight:700;font-size:0.88rem;color:var(--text-primary);">&mdash; danny</span>
+        <a href="https://x.com/bc1plainview" target="_blank" rel="noopener" style="color:var(--text-muted);font-size:0.78rem;text-decoration:none;border-bottom:1px solid rgba(160,160,184,0.2);transition:color 0.2s;" onmouseover="this.style.color='var(--primary-light)'" onmouseout="this.style.color='var(--text-muted)'">@bc1plainview</a>
+      </div>
+    </div>
+
+    <!-- Links -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;margin-top:14px;">
+      <a href="https://vibecode.finance" target="_blank" rel="noopener" class="card" style="padding:16px;text-decoration:none;text-align:center;border-color:rgba(234,179,8,0.15);transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(234,179,8,0.4)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(234,179,8,0.15)';this.style.transform='none'">
+        <div style="font-weight:700;font-size:0.85rem;color:#EAB308;margin-bottom:4px;">vibecode.finance</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);">enter the contest</div>
+      </a>
+      <a href="https://opnet.org" target="_blank" rel="noopener" class="card" style="padding:16px;text-decoration:none;text-align:center;border-color:rgba(168,85,247,0.15);transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(168,85,247,0.4)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(168,85,247,0.15)';this.style.transform='none'">
+        <div style="font-weight:700;font-size:0.85rem;color:var(--primary-light);margin-bottom:4px;">OPNet</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);">bitcoin L1 smart contracts</div>
+      </a>
+      <a href="https://motoswap.org" target="_blank" rel="noopener" class="card" style="padding:16px;text-decoration:none;text-align:center;border-color:rgba(34,197,94,0.15);transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(34,197,94,0.4)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(34,197,94,0.15)';this.style.transform='none'">
+        <div style="font-weight:700;font-size:0.85rem;color:var(--green);margin-bottom:4px;">MotoSwap</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);">dex on bitcoin</div>
+      </a>
+      <a href="https://github.com/bc1plainview/motoswap-tvl" target="_blank" rel="noopener" class="card" style="padding:16px;text-decoration:none;text-align:center;border-color:rgba(160,160,184,0.1);transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(160,160,184,0.3)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='rgba(160,160,184,0.1)';this.style.transform='none'">
+        <div style="font-weight:700;font-size:0.85rem;color:var(--text-primary);margin-bottom:4px;">GitHub</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);">source code</div>
+      </a>
     </div>
   </div>`;
 }
