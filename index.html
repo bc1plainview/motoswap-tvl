@@ -636,6 +636,54 @@ td, input[type="number"] {
 }
 .toggle-switch.active::after { left: 20px; background: var(--green); }
 
+/* ========== Setup Guide ========== */
+.setup-step {
+  display: grid; grid-template-columns: 40px 1fr; gap: 0 16px;
+  margin-bottom: 22px; position: relative;
+}
+.setup-step:last-of-type { margin-bottom: 0; }
+.setup-step::before {
+  content: ''; position: absolute; left: 19px; top: 40px; bottom: -22px;
+  width: 1.5px; background: linear-gradient(180deg, var(--border-hover), var(--border-color));
+}
+.setup-step:last-of-type::before { display: none; }
+.setup-step-num {
+  width: 40px; height: 40px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 0.82rem;
+  font-weight: 800; color: #fff; flex-shrink: 0; z-index: 1;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  box-shadow: 0 0 16px rgba(123, 47, 190, 0.25);
+}
+.setup-step-content { padding-top: 6px; }
+.setup-step-title {
+  font-weight: 700; font-size: 0.92rem; color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.setup-step-desc {
+  font-size: 0.78rem; color: var(--text-secondary); line-height: 1.6;
+  margin-bottom: 10px;
+}
+.setup-code {
+  background: rgba(10, 10, 15, 0.7); border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm); padding: 10px 14px; overflow-x: auto;
+  font-variant-numeric: tabular-nums; position: relative;
+}
+.setup-code code {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.78rem; color: var(--green); white-space: pre; line-height: 1.7;
+}
+.setup-code-tabs { margin-top: 10px; }
+.setup-inline-code {
+  background: var(--bg-elevated); padding: 1px 6px; border-radius: 4px;
+  font-size: 0.75rem; font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--primary-light);
+}
+@media (max-width: 768px) {
+  .setup-step { grid-template-columns: 32px 1fr; gap: 0 12px; }
+  .setup-step-num { width: 32px; height: 32px; font-size: 0.72rem; }
+  .setup-step::before { left: 15px; }
+}
+
 /* ========== Toast ========== */
 .toast-container { position: fixed; top: 50px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
 .toast {
@@ -2368,48 +2416,205 @@ function renderStrategy() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SECTION: CONFIG
+// SECTION: SETUP GUIDE (demo mode) + CONFIG (connected)
 // ══════════════════════════════════════════════════════════════════════════════
-function renderConfig() {
-  const c = DATA.config || {};
-  const connected = !isDemoMode && API_BASE;
+function renderSetupGuide() {
   const savedUrl = API_BASE || '';
   return `
   <div class="section reveal">
-    <!-- Bot Connection Panel -->
-    <div class="config-panel bot-connect-panel" style="position:relative;margin-bottom:16px;">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Bot Connection</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <div style="width:8px;height:8px;border-radius:50%;background:${isDemoMode ? 'var(--yellow)' : 'var(--green)'};box-shadow:0 0 8px ${isDemoMode ? 'rgba(234,179,8,0.6)' : 'rgba(34,197,94,0.6)'};flex-shrink:0;"></div>
-        <span style="font-size:0.82rem;font-weight:600;color:${isDemoMode ? 'var(--yellow)' : 'var(--green)'};">
-          ${isDemoMode ? 'Not Connected — Demo Mode' : 'Connected to Bot'}
-        </span>
+    <div class="section-title">
+      <div class="section-icon" style="background:linear-gradient(135deg, #EAB308, #F97316);">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style="display:block;margin:auto;"><path d="M8 1L1 14h14L8 1z" fill="none" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6v4M8 11.5v.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
       </div>
-      ${isDemoMode ? `
-      <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px;line-height:1.5;">
-        Enter the URL of a running MotoArb bot to execute real trades. The bot owner shares their URL with you, or run your own with <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:0.75rem;">node arb-bot.mjs</code>
+      Run Your Own Bot
+    </div>
+
+    <!-- Connection box -->
+    <div class="card" style="border-color:rgba(168,85,247,0.35);background:linear-gradient(135deg, var(--bg-card), rgba(123,47,190,0.06));margin-bottom:20px;padding:24px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:var(--yellow);box-shadow:0 0 10px rgba(234,179,8,0.5);animation:pulse 2s infinite;"></div>
+        <span style="font-size:1rem;font-weight:700;color:var(--text-primary);">Connect to a Bot</span>
       </div>
-      <div style="display:flex;gap:8px;">
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:16px;line-height:1.6;">
+        Already have a bot running? Paste the URL here to connect and start trading immediately.
+      </div>
+      <div style="display:flex;gap:8px;max-width:600px;">
         <input type="text" id="bot-url-input" placeholder="http://your-server:3004" value="${savedUrl}"
-          style="flex:1;background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-primary);font-size:0.82rem;font-family:inherit;outline:none;transition:border-color 0.2s;"
+          style="flex:1;background:rgba(10,10,15,0.6);border:1.5px solid var(--border-color);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text-primary);font-size:0.85rem;font-family:inherit;outline:none;transition:border-color 0.2s;"
           onfocus="this.style.borderColor='var(--primary-light)'" onblur="this.style.borderColor='var(--border-color)'"
           onkeydown="if(event.key==='Enter')document.getElementById('connect-btn').click()">
         <button id="connect-btn" onclick="connectBot(document.getElementById('bot-url-input').value)"
-          style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 20px;font-weight:700;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:opacity 0.2s;font-family:inherit;"
-          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Connect</button>
+          style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 28px;font-weight:700;font-size:0.85rem;cursor:pointer;white-space:nowrap;transition:all 0.2s;font-family:inherit;box-shadow:0 0 20px rgba(123,47,190,0.3);"
+          onmouseover="this.style.opacity='0.85';this.style.boxShadow='0 0 30px rgba(123,47,190,0.5)'" onmouseout="this.style.opacity='1';this.style.boxShadow='0 0 20px rgba(123,47,190,0.3)'">Connect</button>
       </div>
-      ` : `
-      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
-        <code style="font-size:0.78rem;color:var(--text-secondary);background:var(--bg-elevated);padding:4px 10px;border-radius:var(--radius-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${API_BASE || 'localhost (same origin)'}</code>
-        <button onclick="disconnectBot()" style="background:transparent;border:1px solid var(--border-color);color:var(--text-muted);border-radius:var(--radius-sm);padding:6px 14px;font-size:0.75rem;cursor:pointer;font-family:inherit;transition:all 0.2s;"
-          onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-muted)'">Disconnect</button>
-      </div>
-      `}
     </div>
 
-    <!-- Trading Config -->
+    <!-- Step-by-step setup guide -->
+    <div class="card" style="padding:28px;">
+      <div style="font-weight:800;font-size:1.1rem;margin-bottom:6px;color:var(--text-primary);">Self-Hosting Guide</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:24px;line-height:1.5;">
+        MotoArb is an open-source Bitcoin L1 arbitrage bot that exploits price differences between MotoSwap liquidity pools.
+        Set it up on your own machine in under 5 minutes.
+      </div>
+
+      <!-- Step 1: Prerequisites -->
+      <div class="setup-step">
+        <div class="setup-step-num">1</div>
+        <div class="setup-step-content">
+          <div class="setup-step-title">Prerequisites</div>
+          <div class="setup-step-desc">
+            You need <strong>Node.js 18+</strong> and <strong>git</strong> installed. If you don't have them:
+          </div>
+          <div class="setup-code-tabs">
+            <div style="margin-bottom:4px;font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">macOS</div>
+            <div class="setup-code"><code>brew install node git</code></div>
+            <div style="margin-top:8px;margin-bottom:4px;font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Ubuntu / Debian</div>
+            <div class="setup-code"><code>curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs git</code></div>
+            <div style="margin-top:8px;margin-bottom:4px;font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Windows</div>
+            <div class="setup-code"><code>winget install OpenJS.NodeJS.LTS Git.Git</code></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: Clone & Install -->
+      <div class="setup-step">
+        <div class="setup-step-num">2</div>
+        <div class="setup-step-content">
+          <div class="setup-step-title">Clone & Install</div>
+          <div class="setup-code"><code>git clone https://github.com/bc1plainview/motoswap-tvl.git
+cd motoswap-tvl
+npm install</code></div>
+        </div>
+      </div>
+
+      <!-- Step 3: Start the bot -->
+      <div class="setup-step">
+        <div class="setup-step-num">3</div>
+        <div class="setup-step-content">
+          <div class="setup-step-title">Start the Bot</div>
+          <div class="setup-code"><code>node arb-bot.mjs</code></div>
+          <div class="setup-step-desc">
+            The bot starts on <strong>port 3004</strong> and generates a new Bitcoin wallet automatically (saved to <code class="setup-inline-code">bot-wallet.json</code>).
+            Open <a href="http://localhost:3004" target="_blank" style="color:var(--primary-light);text-decoration:none;border-bottom:1px solid rgba(168,85,247,0.3);">http://localhost:3004</a> to access the dashboard.
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Fund the wallet -->
+      <div class="setup-step">
+        <div class="setup-step-num">4</div>
+        <div class="setup-step-content">
+          <div class="setup-step-title">Fund Your Wallet</div>
+          <div class="setup-step-desc">
+            Your bot wallet needs two things to trade:
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+            <div style="padding:14px;background:rgba(234,179,8,0.04);border:1px solid rgba(234,179,8,0.12);border-radius:var(--radius-sm);">
+              <div style="font-weight:700;font-size:0.82rem;color:#EAB308;margin-bottom:4px;">BTC (Gas)</div>
+              <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.5;">Send a small amount of BTC to the P2TR address shown in the dashboard header. This pays for on-chain transaction fees.</div>
+            </div>
+            <div style="padding:14px;background:rgba(168,85,247,0.04);border:1px solid rgba(168,85,247,0.12);border-radius:var(--radius-sm);">
+              <div style="font-weight:700;font-size:0.82rem;color:var(--primary-light);margin-bottom:4px;">Tokens (MOTO / PILL / ODYS)</div>
+              <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.5;">Expand the wallet bar, copy the ML-DSA public key, and send tokens via <a href="https://opnet.org" target="_blank" style="color:var(--primary-light);">OP_WALLET</a>. The bot needs tokens to swap.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Trade -->
+      <div class="setup-step">
+        <div class="setup-step-num">5</div>
+        <div class="setup-step-content">
+          <div class="setup-step-title">Start Trading</div>
+          <div class="setup-step-desc">
+            Once funded, the bot auto-scans MotoSwap pools every 30 seconds for arbitrage opportunities.
+            Click <strong>Execute Best Route</strong> in the Smart Trade section to run a trade,
+            or enable <strong>Auto-Execute</strong> in the config to let the bot trade on its own.
+          </div>
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div style="border-top:1px solid var(--border-color);margin:24px 0;"></div>
+
+      <!-- Optional: Remote access -->
+      <div style="margin-bottom:0;">
+        <div style="font-weight:700;font-size:0.92rem;margin-bottom:10px;color:var(--text-primary);">Remote Access (Optional)</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:14px;line-height:1.6;">
+          Want to control your bot from this website or share access with others?
+          Expose your bot to the internet with a tunnel, then paste the public URL in the connection box above.
+        </div>
+        <div class="setup-code-tabs">
+          <div style="margin-bottom:4px;font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Cloudflare Tunnel (recommended, free)</div>
+          <div class="setup-code"><code>npx cloudflared tunnel --url http://localhost:3004</code></div>
+          <div style="margin-top:8px;margin-bottom:4px;font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">ngrok</div>
+          <div class="setup-code"><code>ngrok http 3004</code></div>
+          <div style="margin-top:8px;font-size:0.75rem;color:var(--text-secondary);line-height:1.5;">
+            Either command gives you a public URL like <code class="setup-inline-code">https://abc123.trycloudflare.com</code>. Paste that URL in the <strong>Connect to a Bot</strong> box above, and you can trade from anywhere.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- What is MotoArb -->
+    <div class="card" style="padding:24px;margin-top:16px;">
+      <div style="font-weight:700;font-size:0.92rem;margin-bottom:10px;color:var(--text-primary);">What is MotoArb?</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">
+        <strong style="color:var(--text-primary);">MotoArb</strong> is an automated arbitrage bot for
+        <a href="https://motoswap.org" target="_blank" style="color:var(--primary-light);text-decoration:none;border-bottom:1px solid rgba(168,85,247,0.3);">MotoSwap</a>,
+        the first DEX on <a href="https://opnet.org" target="_blank" style="color:var(--primary-light);text-decoration:none;border-bottom:1px solid rgba(168,85,247,0.3);">OPNet</a> (Bitcoin Layer 1 smart contracts).
+        It monitors three liquidity pools (MOTO/PILL, MOTO/ODYS, ODYS/PILL) and detects price differences that can be exploited for profit.
+      </div>
+      <div style="margin-top:14px;display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;">
+        <div style="text-align:center;padding:14px 10px;background:rgba(168,85,247,0.04);border:1px solid rgba(168,85,247,0.1);border-radius:var(--radius-sm);">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--primary-light);margin-bottom:4px;">3</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Liquidity Pools</div>
+        </div>
+        <div style="text-align:center;padding:14px 10px;background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.1);border-radius:var(--radius-sm);">
+          <div style="font-size:1.4rem;font-weight:800;color:var(--green);margin-bottom:4px;">30s</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Scan Interval</div>
+        </div>
+        <div style="text-align:center;padding:14px 10px;background:rgba(234,179,8,0.04);border:1px solid rgba(234,179,8,0.1);border-radius:var(--radius-sm);">
+          <div style="font-size:1.4rem;font-weight:800;color:#EAB308;margin-bottom:4px;">L1</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Bitcoin Native</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;font-size:0.78rem;color:var(--text-secondary);line-height:1.7;">
+        <strong style="color:var(--text-primary);">How arbitrage works:</strong>
+        When Pool A prices MOTO at $0.42 but Pool B prices it at $0.45, the bot buys cheap and sells high.
+        In triangular arb, it routes through three pools (e.g., MOTO &#8594; ODYS &#8594; PILL &#8594; MOTO) and ends up with more MOTO than it started with.
+        The difference is pure profit.
+      </div>
+      <div style="margin-top:14px;padding:12px 16px;background:rgba(34,197,94,0.04);border:1px solid rgba(34,197,94,0.1);border-radius:var(--radius-sm);">
+        <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.6;">
+          <strong style="color:var(--green);">Open Source</strong> &mdash;
+          Full source code on <a href="https://github.com/bc1plainview/motoswap-tvl" target="_blank" style="color:var(--primary-light);text-decoration:none;border-bottom:1px solid rgba(168,85,247,0.3);">GitHub</a>.
+          Your private keys never leave your machine. The wallet is generated locally and stored in <code class="setup-inline-code">bot-wallet.json</code> which is gitignored.
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderConfig() {
+  const c = DATA.config || {};
+  if (isDemoMode) return renderSetupGuide();
+  return `
+  <div class="section reveal">
     <div class="config-panel" style="position:relative;">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Trading Config</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Bot Connection</div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(34,197,94,0.6);"></div>
+          <span style="font-size:0.72rem;font-weight:600;color:var(--green);">Connected</span>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border-color);">
+        <code style="font-size:0.78rem;color:var(--text-secondary);background:var(--bg-elevated);padding:4px 10px;border-radius:var(--radius-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px;">${API_BASE || 'localhost (same origin)'}</code>
+        <button onclick="disconnectBot()" style="background:transparent;border:1px solid var(--border-color);color:var(--text-muted);border-radius:var(--radius-sm);padding:6px 14px;font-size:0.72rem;cursor:pointer;font-family:inherit;transition:all 0.2s;"
+          onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-muted)'">Disconnect</button>
+      </div>
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">Trading Config</div>
       <div class="config-field">
         <label>Slippage %</label>
         <input type="number" value="${c.slippagePct||2}" min="0.1" max="50" step="0.1" onchange="updateConfig('slippagePct', this.value)">

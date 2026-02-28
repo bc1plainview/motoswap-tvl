@@ -73,8 +73,8 @@ function toBig(num, dec = DECIMALS) {
 function decodeRevert(r) {
   if (!r) return 'unknown';
   if (typeof r === 'string') return r;
-  if (r instanceof Buffer || r instanceof Uint8Array) {
-    try { return Buffer.from(r).toString('utf8'); } catch { return String(r); }
+  if (r instanceof Uint8Array) {
+    try { return new TextDecoder().decode(r); } catch { return String(r); }
   }
   return String(r);
 }
