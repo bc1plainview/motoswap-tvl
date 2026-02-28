@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Secrets / personal data
+bot-wallet.json
+bot-trades.json
+bot-approvals.json
+
+# Generated data
+tvl-history.json
+regtest-data.json
+
+# Dev scratch scripts
+call-test.mjs
+discover.mjs
+fetch-all.mjs
+fetch-final.mjs
+fetch-real-data.mjs
+find-motochefs.mjs
+inspect-abis.mjs
+probe.mjs
+scan.mjs
+scan2.mjs
+
+# Env / OS
+.env
+.env.*
+*.log
+.DS_Store
+.vercel

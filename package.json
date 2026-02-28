@@ -1,0 +1,19 @@
+{
+  "name": "motoswap-tvl",
+  "version": "1.0.0",
+  "description": "MotoArb: Automated arbitrage trading bot for MotoSwap on Bitcoin L1 (OPNet). Includes MotoScope TVL analytics dashboard.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "bot": "node arb-bot.mjs",
+    "dev": "node arb-bot.mjs & node server.mjs"
+  },
+  "keywords": ["bitcoin", "opnet", "motoswap", "arbitrage", "defi", "tvl"],
+  "author": "bc1plainview",
+  "license": "MIT",
+  "dependencies": {
+    "@btc-vision/bitcoin": "^6.5.6",
+    "@btc-vision/transaction": "^1.0.0",
+    "opnet": "^1.7.34"
+  }
+}

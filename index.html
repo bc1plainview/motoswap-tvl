@@ -1,0 +1,2307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MotoScope - DeFi Analytics for OPNet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+/* ========== CSS Custom Properties ========== */
+:root {
+  --primary: #7B2FBE;
+  --primary-light: #A855F7;
+  --primary-dark: #4C1D95;
+  --primary-glow: rgba(123, 47, 190, 0.4);
+  --accent: #A855F7;
+  --accent-glow: rgba(168, 85, 247, 0.3);
+  --bg-base: #0A0A0F;
+  --bg-card: rgba(18, 18, 28, 0.7);
+  --bg-card-hover: rgba(28, 28, 42, 0.8);
+  --bg-elevated: rgba(30, 30, 48, 0.6);
+  --border-color: rgba(123, 47, 190, 0.2);
+  --border-hover: rgba(168, 85, 247, 0.4);
+  --text-primary: #F0F0F5;
+  --text-secondary: #A0A0B8;
+  --text-muted: #6B6B80;
+  --green: #22C55E;
+  --green-muted: rgba(34, 197, 94, 0.15);
+  --red: #EF4444;
+  --red-muted: rgba(239, 68, 68, 0.15);
+  --yellow: #EAB308;
+  --blue: #3B82F6;
+  --cyan: #06B6D4;
+  --orange: #F97316;
+  --pink: #EC4899;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 30px var(--primary-glow);
+  --glass-blur: blur(20px);
+  --glass-saturate: saturate(180%);
+  --transition-fast: 150ms ease;
+  --transition-base: 250ms ease;
+  --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --font: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ========== Reset & Base ========== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* ========== Background Effects ========== */
+.bg-effects { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+.glow-orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.3; animation: orbFloat 20s ease-in-out infinite; }
+.glow-orb--1 { width: 600px; height: 600px; background: radial-gradient(circle, var(--primary) 0%, transparent 70%); top: -200px; left: -100px; }
+.glow-orb--2 { width: 500px; height: 500px; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); top: 40%; right: -150px; animation-delay: -7s; opacity: 0.2; }
+.glow-orb--3 { width: 400px; height: 400px; background: radial-gradient(circle, #6D28D9 0%, transparent 70%); bottom: -100px; left: 30%; animation-delay: -14s; opacity: 0.15; }
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -40px) scale(1.05); }
+  50% { transform: translate(-20px, 20px) scale(0.95); }
+  75% { transform: translate(40px, 30px) scale(1.02); }
+}
+.grid-overlay {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image: linear-gradient(rgba(123,47,190,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(123,47,190,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ========== Layout ========== */
+.container { max-width: 1400px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
+
+/* ========== Price Ticker ========== */
+.price-ticker {
+  width: 100%; padding: 8px 0; overflow: hidden;
+  background: linear-gradient(180deg, rgba(18,18,28,0.9) 0%, rgba(10,10,15,0.95) 100%);
+  border-bottom: 1px solid var(--border-color); position: relative; z-index: 100;
+}
+.ticker-track {
+  display: flex; gap: 40px; padding: 0 20px; align-items: center;
+  animation: tickerScroll 30s linear infinite;
+  width: max-content;
+}
+.ticker-track:hover { animation-play-state: paused; }
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-item {
+  display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  font-size: 0.78rem; font-weight: 500; color: var(--text-secondary);
+}
+.ticker-item .symbol { color: var(--text-primary); font-weight: 600; }
+.ticker-item .price { color: var(--primary-light); }
+.ticker-item .btc-price { color: var(--yellow); font-size: 0.72rem; }
+.ticker-sep { color: var(--text-muted); opacity: 0.3; }
+
+/* ========== Status Banner ========== */
+.status-banner {
+  width: 100%; padding: 10px 20px; text-align: center;
+  font-size: 0.8rem; font-weight: 500; letter-spacing: 0.03em;
+  position: relative; z-index: 100;
+}
+.status-banner--live {
+  background: linear-gradient(90deg, rgba(34,197,94,0.12), rgba(34,197,94,0.06), rgba(34,197,94,0.12));
+  color: var(--green); border-bottom: 1px solid rgba(34,197,94,0.2);
+}
+.status-banner--loading {
+  background: linear-gradient(90deg, rgba(234,179,8,0.12), rgba(234,179,8,0.06), rgba(234,179,8,0.12));
+  color: var(--yellow); border-bottom: 1px solid rgba(234,179,8,0.2);
+}
+.pulse-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.status-banner--live .pulse-dot { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.6); animation: pulse 2s infinite; }
+.status-banner--loading .pulse-dot { background: var(--yellow); box-shadow: 0 0 8px rgba(234,179,8,0.6); animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
+
+/* ========== Header ========== */
+.header { padding: 32px 0 24px; }
+.header-inner { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+.header-left {}
+.brand { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+.brand-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 20px var(--primary-glow); font-size: 24px; font-weight: 800; color: white;
+}
+.brand-name { font-size: 1.8rem; font-weight: 800; background: linear-gradient(135deg, var(--text-primary), var(--primary-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.header-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-left: 62px; margin-top: -4px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.nav-btn {
+  padding: 8px 16px; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-card);
+  color: var(--text-secondary); transition: all var(--transition-base); font-family: var(--font);
+  backdrop-filter: var(--glass-blur);
+}
+.nav-btn:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--bg-card-hover); }
+.nav-btn.active { border-color: var(--primary); color: var(--primary-light); background: rgba(123,47,190,0.12); }
+.back-btn {
+  padding: 8px 16px; border-radius: var(--radius-sm); font-size: 0.82rem; font-weight: 500;
+  cursor: pointer; border: 1px solid var(--border-color); background: var(--bg-card);
+  color: var(--text-secondary); transition: all var(--transition-base); font-family: var(--font);
+  display: flex; align-items: center; gap: 6px;
+}
+.back-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+/* ========== Cards ========== */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg);
+  padding: 24px; backdrop-filter: var(--glass-blur) var(--glass-saturate);
+  transition: all var(--transition-base); position: relative; overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary-light), transparent); opacity: 0.3;
+}
+.card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+.card-clickable { cursor: pointer; }
+.card-clickable:hover { transform: translateY(-2px); box-shadow: var(--shadow-glow); }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.card-title { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+.card-badge {
+  font-size: 0.7rem; font-weight: 600; padding: 3px 10px; border-radius: 20px;
+  background: rgba(123,47,190,0.15); color: var(--primary-light); border: 1px solid rgba(123,47,190,0.25);
+}
+
+/* ========== TVL Hero ========== */
+.tvl-hero { text-align: center; padding: 40px 0 32px; }
+.tvl-hero-label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+.tvl-hero-value { font-size: 3.5rem; font-weight: 900; background: linear-gradient(135deg, #fff, var(--primary-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; line-height: 1.1; }
+.tvl-hero-btc { font-size: 1.3rem; color: var(--yellow); margin-top: 8px; font-weight: 600; }
+.tvl-hero-sub { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ========== Grids ========== */
+.grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+@media (max-width: 900px) {
+  .grid-2, .grid-3, .grid-4, .grid-2-1 { grid-template-columns: 1fr; }
+}
+.section { margin-bottom: 24px; }
+.section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.section-title .icon { font-size: 1.3rem; }
+
+/* ========== Metric Items ========== */
+.metric { margin-bottom: 12px; }
+.metric:last-child { margin-bottom: 0; }
+.metric-label { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 2px; }
+.metric-value { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
+.metric-value.small { font-size: 1rem; }
+.metric-sub { font-size: 0.75rem; color: var(--text-secondary); margin-top: 1px; }
+.metric-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(123,47,190,0.08); }
+.metric-row:last-child { border-bottom: none; }
+
+/* ========== Progress Bar ========== */
+.progress-bar { width: 100%; height: 8px; border-radius: 4px; background: rgba(123,47,190,0.1); overflow: hidden; margin-top: 6px; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+.progress-fill.purple { background: linear-gradient(90deg, var(--primary), var(--accent)); }
+.progress-fill.green { background: linear-gradient(90deg, #16a34a, var(--green)); }
+.progress-fill.blue { background: linear-gradient(90deg, #2563eb, var(--blue)); }
+.progress-fill.yellow { background: linear-gradient(90deg, #ca8a04, var(--yellow)); }
+.progress-fill.cyan { background: linear-gradient(90deg, #0891b2, var(--cyan)); }
+.progress-fill.orange { background: linear-gradient(90deg, #ea580c, var(--orange)); }
+
+/* ========== Pool Cards ========== */
+.pool-card { position: relative; }
+.pool-card .pool-pair { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; }
+.pool-card .pool-tvl { font-size: 1.5rem; font-weight: 800; color: var(--green); }
+.pool-card .pool-tvl-btc { font-size: 0.85rem; color: var(--yellow); font-weight: 500; }
+.pool-card .reserves-row { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(123,47,190,0.1); }
+.pool-card .reserve-item { text-align: center; flex: 1; }
+.pool-card .reserve-label { font-size: 0.72rem; color: var(--text-muted); }
+.pool-card .reserve-value { font-size: 0.95rem; font-weight: 600; }
+.pool-card .reserve-usd { font-size: 0.72rem; color: var(--text-secondary); }
+.pool-card .dominance-bar { margin-top: 12px; }
+.pool-card .pool-meta { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.75rem; color: var(--text-muted); }
+
+/* ========== Token Cards ========== */
+.token-card {}
+.token-card .token-name { font-size: 1.1rem; font-weight: 700; margin-bottom: 2px; }
+.token-card .token-symbol { font-size: 0.8rem; color: var(--text-secondary); }
+.token-card .token-price { font-size: 1.4rem; font-weight: 700; color: var(--green); margin: 8px 0 4px; }
+.token-card .token-price-btc { font-size: 0.82rem; color: var(--yellow); }
+
+/* ========== Staking Card ========== */
+.staking-hero { text-align: center; padding: 20px 0; }
+.staking-hero-value { font-size: 2.2rem; font-weight: 800; color: var(--primary-light); }
+
+/* ========== Detail View ========== */
+.detail-header { margin-bottom: 24px; }
+.detail-title { font-size: 2rem; font-weight: 800; margin-bottom: 4px; }
+.detail-subtitle { font-size: 0.9rem; color: var(--text-muted); }
+.detail-address {
+  font-size: 0.75rem; color: var(--text-muted); font-family: monospace;
+  background: rgba(123,47,190,0.08); padding: 6px 12px; border-radius: var(--radius-sm);
+  margin-top: 8px; word-break: break-all; display: inline-block;
+}
+
+/* ========== Reserves Visualization ========== */
+.reserves-viz { display: flex; height: 40px; border-radius: var(--radius-sm); overflow: hidden; margin: 16px 0; }
+.reserves-viz-bar { display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 600; color: white; transition: width 0.6s ease; }
+.reserves-viz-bar.token0 { background: linear-gradient(90deg, var(--primary), var(--accent)); }
+.reserves-viz-bar.token1 { background: linear-gradient(90deg, var(--cyan), var(--blue)); }
+
+/* ========== Chart Container ========== */
+.chart-container { position: relative; width: 100%; height: 300px; }
+.chart-container canvas { width: 100% !important; height: 100% !important; }
+
+/* ========== Distribution Ring ========== */
+.dist-ring-container { display: flex; align-items: center; gap: 24px; }
+.dist-ring-wrap { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+.dist-ring-wrap canvas { width: 100% !important; height: 100% !important; }
+.dist-legend { flex: 1; }
+.dist-legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.dist-legend-color { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.dist-legend-label { font-size: 0.8rem; color: var(--text-secondary); }
+.dist-legend-value { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-left: auto; }
+
+/* ========== Table ========== */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th {
+  text-align: left; padding: 10px 12px; font-size: 0.75rem; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border-color);
+}
+.data-table td { padding: 12px; font-size: 0.85rem; border-bottom: 1px solid rgba(123,47,190,0.06); }
+.data-table tr:hover td { background: rgba(123,47,190,0.04); }
+.data-table .text-right { text-align: right; }
+.data-table .text-green { color: var(--green); }
+.data-table .text-yellow { color: var(--yellow); }
+.data-table .text-muted { color: var(--text-muted); }
+
+/* ========== Tooltips ========== */
+.info-tip { position: relative; display: inline-flex; cursor: help; margin-left: 4px; }
+.info-tip::after {
+  content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) translateY(-4px);
+  background: rgba(30,30,48,0.95); color: var(--text-secondary); padding: 6px 10px; border-radius: var(--radius-sm);
+  font-size: 0.72rem; white-space: nowrap; pointer-events: none; opacity: 0;
+  transition: opacity var(--transition-fast); border: 1px solid var(--border-color);
+}
+.info-tip:hover::after { opacity: 1; }
+
+/* ========== Animations ========== */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+.fade-in { animation: fadeIn 0.4s ease forwards; }
+.slide-up { animation: slideUp 0.5s ease forwards; }
+.stagger-1 { animation-delay: 0.05s; opacity: 0; }
+.stagger-2 { animation-delay: 0.1s; opacity: 0; }
+.stagger-3 { animation-delay: 0.15s; opacity: 0; }
+.stagger-4 { animation-delay: 0.2s; opacity: 0; }
+.stagger-5 { animation-delay: 0.25s; opacity: 0; }
+.stagger-6 { animation-delay: 0.3s; opacity: 0; }
+
+/* ========== Scrollbar ========== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--primary-dark); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* ========== Misc ========== */
+.mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+.text-green { color: var(--green); }
+.text-yellow { color: var(--yellow); }
+.text-purple { color: var(--primary-light); }
+.text-orange { color: var(--orange); }
+.text-muted { color: var(--text-muted); }
+.text-sm { font-size: 0.82rem; }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+.mt-8 { margin-top: 8px; }
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.gap-8 { gap: 8px; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.w-full { width: 100%; }
+a { color: var(--primary-light); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.hidden { display: none !important; }
+
+/* ========== Loading Overlay ========== */
+.loading-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg-base);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+.loading-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.loading-card {
+  text-align: center; padding: 48px; max-width: 420px; width: 100%;
+}
+.loading-brand {
+  width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 16px;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 800; color: white;
+  box-shadow: 0 0 40px var(--primary-glow);
+  animation: loadPulse 2s ease-in-out infinite;
+}
+@keyframes loadPulse {
+  0%, 100% { box-shadow: 0 0 40px var(--primary-glow); transform: scale(1); }
+  50% { box-shadow: 0 0 60px rgba(168,85,247,0.5); transform: scale(1.05); }
+}
+.loading-title {
+  font-size: 1.6rem; font-weight: 800; margin-bottom: 4px;
+  background: linear-gradient(135deg, var(--text-primary), var(--primary-light));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.loading-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 28px; }
+.loading-progress-track {
+  width: 100%; height: 6px; border-radius: 3px;
+  background: rgba(123,47,190,0.15); overflow: hidden; margin-bottom: 12px;
+}
+.loading-progress-fill {
+  height: 100%; border-radius: 3px; width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary-light));
+  background-size: 200% 100%;
+  animation: progressShimmer 1.5s linear infinite;
+  transition: width 0.4s ease;
+}
+@keyframes progressShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.loading-status { font-size: 0.75rem; color: var(--text-secondary); }
+
+/* ========== Arbitrage ========== */
+.arb-viable { border-color: var(--green) !important; }
+.arb-viable::before { background: linear-gradient(90deg, transparent, var(--green), transparent) !important; }
+.arb-not-viable { opacity: 0.65; }
+.arb-direction-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px;
+  font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+}
+.arb-direction-badge.sell { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.25); }
+.arb-direction-badge.buy { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+.arb-direction-badge.neutral { background: rgba(160,160,184,0.1); color: var(--text-muted); border: 1px solid rgba(160,160,184,0.15); }
+.arb-arrow { color: var(--primary-light); font-weight: 700; margin: 0 4px; }
+.deviation-bar { height: 6px; border-radius: 3px; background: rgba(123,47,190,0.1); overflow: hidden; margin-top: 6px; }
+.deviation-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+.deviation-fill.low { background: var(--green); }
+.deviation-fill.med { background: var(--yellow); }
+.deviation-fill.high { background: var(--orange); }
+.deviation-fill.extreme { background: var(--red); }
+.impact-low { color: var(--green); }
+.impact-med { color: var(--yellow); }
+.impact-high { color: var(--orange); }
+.impact-extreme { color: var(--red); }
+.tri-arb-step {
+  display: flex; align-items: center; gap: 8px; padding: 8px 0;
+  border-bottom: 1px solid rgba(123,47,190,0.06); font-size: 0.82rem;
+}
+.tri-arb-step:last-child { border-bottom: none; }
+.tri-arb-step .step-num {
+  width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700; background: rgba(123,47,190,0.15); color: var(--primary-light); flex-shrink: 0;
+}
+.tri-arb-cycle {
+  display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600;
+  padding: 10px 0; margin-bottom: 8px;
+}
+.tri-arb-cycle .cycle-token { color: var(--text-primary); }
+.tri-arb-cycle .cycle-arrow { color: var(--primary-light); font-size: 0.9rem; }
+
+.footer {
+  text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 0.78rem;
+  border-top: 1px solid var(--border-color); margin-top: 40px;
+}
+</style>
+</head>
+<body>
+
+<div class="bg-effects">
+  <div class="glow-orb glow-orb--1"></div>
+  <div class="glow-orb glow-orb--2"></div>
+  <div class="glow-orb glow-orb--3"></div>
+</div>
+<div class="grid-overlay"></div>
+
+<!-- Price Ticker -->
+<div class="price-ticker">
+  <div class="ticker-track" id="ticker-track"></div>
+</div>
+
+<!-- Status Banner -->
+<div class="status-banner status-banner--loading" id="status-banner">
+  <span class="pulse-dot"></span> Connecting to OPNet Regtest...
+</div>
+
+<!-- Loading Progress Bar -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-card">
+    <div class="loading-brand">MS</div>
+    <div class="loading-title">MotoScope</div>
+    <div class="loading-sub">Fetching on-chain data from OPNet Regtest...</div>
+    <div class="loading-progress-track">
+      <div class="loading-progress-fill" id="loading-fill"></div>
+    </div>
+    <div class="loading-status" id="loading-status">Connecting to RPC...</div>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="brand">
+          <div class="brand-icon">MS</div>
+          <div class="brand-name">MotoScope</div>
+        </div>
+        <div class="header-subtitle">DeFi Intelligence for MotoSwap &middot; OPNet Regtest</div>
+      </div>
+      <div class="header-right" id="nav-buttons">
+        <button class="nav-btn active" onclick="navigate('#/')">Overview</button>
+        <button class="nav-btn" onclick="navigate('#/pools')">Pools</button>
+        <button class="nav-btn" onclick="navigate('#/tokens')">Tokens</button>
+        <button class="nav-btn" onclick="navigate('#/staking')">Staking</button>
+        <button class="nav-btn" onclick="navigate('#/farming')">Farming</button>
+        <button class="nav-btn" onclick="navigate('#/arbitrage')">Arbitrage</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div id="app"></div>
+
+  <div class="footer">
+    MotoScope &middot; DeFi Intelligence for MotoSwap on OPNet &middot; Data refreshes every 60s<br>
+    <span class="text-muted" id="footer-update"></span>
+  </div>
+</div>
+
+<script>
+// ── State ───────────────────────────────────────────────────────────────────
+let DATA = null;
+let HISTORY = [];
+let chartInstances = {};
+
+// ── Formatting ──────────────────────────────────────────────────────────────
+function fmtUsd(n) {
+  if (n == null || isNaN(n)) return '$0.00';
+  if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n / 1e3).toFixed(2) + 'K';
+  if (n >= 1) return '$' + n.toFixed(2);
+  if (n >= 0.01) return '$' + n.toFixed(4);
+  return '$' + n.toFixed(6);
+}
+
+function fmtBtc(n) {
+  if (n == null || isNaN(n)) return '0 BTC';
+  if (n >= 1000) return n.toFixed(2) + ' BTC';
+  if (n >= 1) return n.toFixed(4) + ' BTC';
+  if (n >= 0.001) return n.toFixed(6) + ' BTC';
+  return n.toFixed(8) + ' BTC';
+}
+
+function fmtNum(n, dec = 2) {
+  if (n == null || isNaN(n)) return '0';
+  if (n >= 1e9) return (n / 1e9).toFixed(dec) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(dec) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(dec) + 'K';
+  return n.toFixed(dec);
+}
+
+function fmtFull(n) {
+  if (n == null) return '0';
+  return Number(n).toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function fmtPct(n) {
+  if (n == null || isNaN(n)) return '0%';
+  return n.toFixed(2) + '%';
+}
+
+function fmtAddr(a) {
+  if (!a) return '';
+  if (a.length > 16) return a.slice(0, 10) + '...' + a.slice(-8);
+  return a;
+}
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Navigation ──────────────────────────────────────────────────────────────
+function navigate(hash) {
+  window.location.hash = hash;
+}
+
+function getRoute() {
+  const hash = window.location.hash || '#/';
+  return hash;
+}
+
+function updateNav() {
+  const route = getRoute();
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    const target = btn.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || '';
+    btn.classList.toggle('active', route === target || (route.startsWith(target) && target !== '#/') || (target === '#/' && route === '#/'));
+  });
+}
+
+// ── Render Router ───────────────────────────────────────────────────────────
+function render() {
+  if (!DATA) return;
+  const route = getRoute();
+  const app = document.getElementById('app');
+
+  // Destroy old charts
+  Object.values(chartInstances).forEach(c => c.destroy());
+  chartInstances = {};
+
+  if (route === '#/' || route === '' || route === '#') {
+    app.innerHTML = renderOverview();
+  } else if (route === '#/pools') {
+    app.innerHTML = renderPoolsList();
+  } else if (route.startsWith('#/pool/')) {
+    const addr = route.replace('#/pool/', '');
+    app.innerHTML = renderPoolDetail(addr);
+  } else if (route === '#/tokens') {
+    app.innerHTML = renderTokensList();
+  } else if (route.startsWith('#/token/')) {
+    const sym = route.replace('#/token/', '');
+    app.innerHTML = renderTokenDetail(sym);
+  } else if (route === '#/staking') {
+    app.innerHTML = renderStakingDetail();
+  } else if (route === '#/farming') {
+    app.innerHTML = renderFarmingDetail();
+  } else if (route === '#/arbitrage') {
+    app.innerHTML = renderArbitrage();
+  } else {
+    app.innerHTML = renderOverview();
+  }
+
+  updateNav();
+
+  // Initialize charts after DOM is ready
+  requestAnimationFrame(() => initCharts(route));
+}
+
+// ── Overview Page ───────────────────────────────────────────────────────────
+function renderOverview() {
+  const tvl = DATA.tvl?.total || {};
+  const poolsTvl = DATA.tvl?.pools || {};
+  const stakingTvl = DATA.tvl?.staking || {};
+  const farmingTvl = DATA.tvl?.farming || {};
+  const poolsShare = tvl.usd > 0 ? (poolsTvl.usd / tvl.usd) * 100 : 0;
+  const stakingShare = tvl.usd > 0 ? (stakingTvl.usd / tvl.usd) * 100 : 0;
+  const farmingShare = tvl.usd > 0 ? (farmingTvl.usd / tvl.usd) * 100 : 0;
+
+  let html = '';
+
+  // TVL Hero
+  const farmCount = DATA.farming?.motoChefs?.length || 0;
+  html += `
+  <div class="tvl-hero slide-up">
+    <div class="tvl-hero-label">Total Value Locked</div>
+    <div class="tvl-hero-value">${fmtUsd(tvl.usd)}</div>
+    <div class="tvl-hero-btc">${fmtBtc(tvl.btc)}</div>
+    <div class="tvl-hero-sub">Across ${DATA.pools?.filter(p => !p.error).length || 0} pools + staking${farmCount > 0 ? ' + ' + farmCount + ' farm' + (farmCount > 1 ? 's' : '') : ''} &middot; Block #${fmtNum(DATA.chain?.blockNumber, 0)}</div>
+  </div>`;
+
+  // TVL Breakdown Cards
+  html += `
+  <div class="grid-4 section slide-up stagger-1">
+    <div class="card card-clickable" onclick="navigate('#/pools')">
+      <div class="card-header">
+        <span class="card-title">Liquidity Pools</span>
+        <span class="card-badge">${fmtPct(poolsShare)}</span>
+      </div>
+      <div class="metric">
+        <div class="metric-value text-green">${fmtUsd(poolsTvl.usd)}</div>
+        <div class="metric-sub text-yellow">${fmtBtc(poolsTvl.btc)}</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill green" style="width:${poolsShare}%"></div></div>
+    </div>
+    <div class="card card-clickable" onclick="navigate('#/staking')">
+      <div class="card-header">
+        <span class="card-title">Staking</span>
+        <span class="card-badge">${fmtPct(stakingShare)}</span>
+      </div>
+      <div class="metric">
+        <div class="metric-value text-purple">${fmtUsd(stakingTvl.usd)}</div>
+        <div class="metric-sub text-yellow">${fmtBtc(stakingTvl.btc)}</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill purple" style="width:${stakingShare}%"></div></div>
+    </div>
+    <div class="card card-clickable" onclick="navigate('#/farming')">
+      <div class="card-header">
+        <span class="card-title">Yield Farming</span>
+        <span class="card-badge">${fmtPct(farmingShare)}</span>
+      </div>
+      <div class="metric">
+        <div class="metric-value text-orange">${fmtUsd(farmingTvl.usd)}</div>
+        <div class="metric-sub text-yellow">${fmtBtc(farmingTvl.btc)}</div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill orange" style="width:${farmingShare}%"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Bitcoin Price</span>
+        <span class="card-badge">${DATA.btcPrice?.source || 'N/A'}</span>
+      </div>
+      <div class="metric">
+        <div class="metric-value">${fmtUsd(DATA.btcPrice?.usd)}</div>
+        <div class="metric-sub">1 BTC</div>
+      </div>
+    </div>
+  </div>`;
+
+  // TVL Chart + Protocol Breakdown
+  html += `
+  <div class="grid-2-1 section slide-up stagger-2">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">TVL Over Time</span>
+        <span class="card-badge">Live</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="tvl-chart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">TVL Composition</span>
+      </div>
+      <div class="dist-ring-container">
+        <div class="dist-ring-wrap"><canvas id="tvl-pie"></canvas></div>
+        <div class="dist-legend" id="tvl-pie-legend"></div>
+      </div>
+    </div>
+  </div>`;
+
+  // Pool Cards
+  html += `<div class="section-title slide-up stagger-3"><span class="icon">&#x1f4ca;</span> Liquidity Pools</div>`;
+  html += `<div class="grid-3 section slide-up stagger-3">`;
+  for (const pool of (DATA.pools || [])) {
+    if (pool.error) continue;
+    html += renderPoolCard(pool);
+  }
+  html += `</div>`;
+
+  // Token Cards
+  html += `<div class="section-title slide-up stagger-4"><span class="icon">&#x1fa99;</span> Token Prices</div>`;
+  html += `<div class="grid-3 section slide-up stagger-4">`;
+  for (const [sym, token] of Object.entries(DATA.tokens || {})) {
+    if (token.error) continue;
+    html += renderTokenCard(sym, token);
+  }
+  html += `</div>`;
+
+  // NativeSwap Reserves
+  if (DATA.nativeSwap && Object.keys(DATA.nativeSwap).length > 0) {
+    html += `<div class="section-title slide-up stagger-5"><span class="icon">&#x26a1;</span> NativeSwap Reserves (BTC Pricing Source)</div>`;
+    html += `<div class="card section slide-up stagger-5">
+      <table class="data-table">
+        <thead><tr><th>Token</th><th class="text-right">Virtual BTC Reserve</th><th class="text-right">Virtual Token Reserve</th><th class="text-right">Token Liquidity</th><th class="text-right">Price (BTC)</th><th class="text-right">Price (USD)</th></tr></thead>
+        <tbody>`;
+    for (const [sym, ns] of Object.entries(DATA.nativeSwap)) {
+      html += `
+        <tr>
+          <td><strong>${sym}</strong></td>
+          <td class="text-right text-yellow fw-600">${ns.virtualBTCReserve?.toFixed(4)} BTC</td>
+          <td class="text-right">${fmtNum(ns.virtualTokenReserve)} ${sym}</td>
+          <td class="text-right">${fmtNum(ns.liquidity)} ${sym}</td>
+          <td class="text-right text-yellow">${ns.priceBtc?.toFixed(10)} BTC</td>
+          <td class="text-right text-green">${fmtUsd(ns.priceUsd)}</td>
+        </tr>`;
+    }
+    html += `</tbody></table>
+      <div class="mt-8 text-sm text-muted">Prices derived from NativeSwap virtual reserves (virtualBTCReserve / virtualTokenReserve). Qualified tokens: ${DATA.qualifiedTokens?.join(', ') || 'N/A'}${DATA.excludedTokens?.length > 0 ? ' &middot; Excluded: ' + DATA.excludedTokens.join(', ') : ''}</div>
+    </div>`;
+  }
+
+  // Protocol Info
+  html += `
+  <div class="section slide-up stagger-6">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Protocol Details</span>
+        <span class="card-badge">OPNet Regtest</span>
+      </div>
+      <div class="grid-2">
+        <div>
+          <div class="metric-row"><span class="text-muted text-sm">Block Height</span><span class="fw-600">#${fmtFull(DATA.chain?.blockNumber)}</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">Factory</span><span class="mono text-sm">${fmtAddr(DATA.protocol?.factoryAddress)}</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">Router</span><span class="mono text-sm">${fmtAddr(DATA.protocol?.routerAddress)}</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">NativeSwap</span><span class="mono text-sm">${fmtAddr(DATA.protocol?.nativeSwapAddress)}</span></div>
+        </div>
+        <div>
+          <div class="metric-row"><span class="text-muted text-sm">Base Gas</span><span class="fw-600">${DATA.chain?.gas?.baseGas || 'N/A'}</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">Staking Contract</span><span class="mono text-sm">${fmtAddr(DATA.protocol?.stakingAddress)}</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">Price Source</span><span class="fw-600">NativeSwap + ${DATA.btcPrice?.source || 'N/A'}</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">Last Updated</span><span class="fw-600">${fmtTime(DATA.lastUpdated)}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  return html;
+}
+
+// ── Pool Card (for overview) ────────────────────────────────────────────────
+function renderPoolCard(pool) {
+  const tvlUsd = pool.tvlUsd || 0;
+  const tvlBtc = pool.tvlBtc || 0;
+  const dom = pool.dominancePct || 0;
+  const t0val = pool.token0ValueUsd || 0;
+  const t1val = pool.token1ValueUsd || 0;
+  const valTotal = t0val + t1val;
+  const t0pct = valTotal > 0 ? (t0val / valTotal) * 100 : 50;
+
+  return `
+  <div class="card card-clickable pool-card" onclick="navigate('#/pool/${pool.poolAddress}')">
+    <div class="card-header">
+      <span class="pool-pair">${pool.pairLabel}</span>
+      <span class="card-badge">${fmtPct(dom)} TVL</span>
+    </div>
+    <div class="pool-tvl">${fmtUsd(tvlUsd)}</div>
+    <div class="pool-tvl-btc">${fmtBtc(tvlBtc)}</div>
+    <div class="reserves-viz">
+      <div class="reserves-viz-bar token0" style="width:${t0pct}%">${pool.token0Symbol}</div>
+      <div class="reserves-viz-bar token1" style="width:${100 - t0pct}%">${pool.token1Symbol}</div>
+    </div>
+    <div class="reserves-row">
+      <div class="reserve-item">
+        <div class="reserve-label">${pool.token0Symbol}</div>
+        <div class="reserve-value">${fmtNum(pool.reserve0Num)}</div>
+        <div class="reserve-usd">${fmtUsd(t0val)}</div>
+      </div>
+      <div class="reserve-item">
+        <div class="reserve-label">${pool.token1Symbol}</div>
+        <div class="reserve-value">${fmtNum(pool.reserve1Num)}</div>
+        <div class="reserve-usd">${fmtUsd(t1val)}</div>
+      </div>
+    </div>
+    <div class="pool-meta">
+      <span>LP Supply: ${fmtNum(pool.lpSupplyNum)}</span>
+      <span>${pool.priceRatioLabel || ''}</span>
+    </div>
+  </div>`;
+}
+
+// ── Token Card (for overview) ───────────────────────────────────────────────
+function renderTokenCard(sym, token) {
+  return `
+  <div class="card card-clickable token-card" onclick="navigate('#/token/${sym}')">
+    <div class="card-header">
+      <div>
+        <div class="token-name">${token.name}</div>
+        <div class="token-symbol">${token.symbol}</div>
+      </div>
+      <span class="card-badge">${sym}</span>
+    </div>
+    <div class="token-price">${fmtUsd(token.priceUsd)}</div>
+    <div class="token-price-btc">${fmtBtc(token.priceBtc)}</div>
+    <div class="mt-8">
+      <div class="metric-row"><span class="text-muted text-sm">Market Cap</span><span class="fw-600 text-sm">${fmtUsd(token.marketCapUsd)}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">Circulating</span><span class="fw-600 text-sm">${fmtNum(token.totalSupply)}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">In Protocol</span><span class="fw-600 text-sm text-purple">${fmtPct((token.distribution?.inPoolsPct || 0) + (token.distribution?.inStakingPct || 0))}</span></div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill purple" style="width:${(token.distribution?.inPoolsPct || 0) + (token.distribution?.inStakingPct || 0)}%"></div></div>
+  </div>`;
+}
+
+// ── Pools List Page ─────────────────────────────────────────────────────────
+function renderPoolsList() {
+  let html = `
+  <div class="detail-header slide-up">
+    <div class="detail-title">Liquidity Pools</div>
+    <div class="detail-subtitle">All MotoSwap AMM pools on OPNet Regtest</div>
+  </div>`;
+
+  // Summary row
+  const poolsTvl = DATA.tvl?.pools || {};
+  html += `
+  <div class="grid-4 section slide-up stagger-1">
+    <div class="card">
+      <div class="card-title mb-8">Total Pool TVL</div>
+      <div class="metric-value text-green">${fmtUsd(poolsTvl.usd)}</div>
+      <div class="metric-sub text-yellow">${fmtBtc(poolsTvl.btc)}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Active Pools</div>
+      <div class="metric-value">${DATA.pools?.filter(p => !p.error).length || 0}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Tokens Paired</div>
+      <div class="metric-value">${Object.keys(DATA.tokens || {}).length}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Pool Share Chart</div>
+      <div style="height:80px;"><canvas id="pools-mini-pie"></canvas></div>
+    </div>
+  </div>`;
+
+  // Pool table
+  html += `
+  <div class="card section slide-up stagger-2">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Pool</th>
+          <th class="text-right">TVL (USD)</th>
+          <th class="text-right">TVL (BTC)</th>
+          <th class="text-right">Reserve 0</th>
+          <th class="text-right">Reserve 1</th>
+          <th class="text-right">LP Supply</th>
+          <th class="text-right">Dominance</th>
+        </tr>
+      </thead>
+      <tbody>`;
+  for (const pool of (DATA.pools || [])) {
+    if (pool.error) continue;
+    html += `
+        <tr style="cursor:pointer" onclick="navigate('#/pool/${pool.poolAddress}')">
+          <td><strong>${pool.pairLabel}</strong></td>
+          <td class="text-right text-green fw-600">${fmtUsd(pool.tvlUsd)}</td>
+          <td class="text-right text-yellow">${fmtBtc(pool.tvlBtc)}</td>
+          <td class="text-right">${fmtNum(pool.reserve0Num)} <span class="text-muted">${pool.token0Symbol}</span></td>
+          <td class="text-right">${fmtNum(pool.reserve1Num)} <span class="text-muted">${pool.token1Symbol}</span></td>
+          <td class="text-right">${fmtNum(pool.lpSupplyNum)}</td>
+          <td class="text-right">${fmtPct(pool.dominancePct)}</td>
+        </tr>`;
+  }
+  html += `</tbody></table></div>`;
+
+  // Pool cards
+  html += `<div class="grid-3 section slide-up stagger-3">`;
+  for (const pool of (DATA.pools || [])) {
+    if (pool.error) continue;
+    html += renderPoolCard(pool);
+  }
+  html += `</div>`;
+
+  return html;
+}
+
+// ── Pool Detail Page ────────────────────────────────────────────────────────
+function renderPoolDetail(addr) {
+  const pool = DATA.pools?.find(p => p.poolAddress === addr);
+  if (!pool) return `<div class="card"><p>Pool not found</p></div>`;
+
+  const tvlUsd = pool.tvlUsd || 0;
+  const tvlBtc = pool.tvlBtc || 0;
+  const t0val = pool.token0ValueUsd || 0;
+  const t1val = pool.token1ValueUsd || 0;
+  const valTotal = t0val + t1val;
+  const t0pct = valTotal > 0 ? (t0val / valTotal) * 100 : 50;
+
+  // Compute k = r0 * r1 (constant product)
+  const k = pool.reserve0Num * pool.reserve1Num;
+
+  // LP token value
+  const lpValUsd = pool.lpValueUsd || 0;
+  const lpValBtc = pool.lpValueBtc || 0;
+
+  let html = `
+  <div class="slide-up">
+    <button class="back-btn" onclick="navigate('#/pools')">&#8592; Back to Pools</button>
+  </div>
+  <div class="detail-header slide-up stagger-1">
+    <div class="detail-title">${pool.pairLabel} Pool</div>
+    <div class="detail-subtitle">MotoSwap Liquidity Pool</div>
+    <div class="detail-address">${pool.poolAddress}</div>
+  </div>`;
+
+  // Hero metrics
+  html += `
+  <div class="grid-4 section slide-up stagger-2">
+    <div class="card">
+      <div class="card-title mb-8">Pool TVL</div>
+      <div class="metric-value text-green">${fmtUsd(tvlUsd)}</div>
+      <div class="metric-sub text-yellow">${fmtBtc(tvlBtc)}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">LP Token Value</div>
+      <div class="metric-value small">${fmtUsd(lpValUsd)}</div>
+      <div class="metric-sub text-yellow">${fmtBtc(lpValBtc)}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">LP Total Supply</div>
+      <div class="metric-value small">${fmtFull(pool.lpSupplyNum)}</div>
+      <div class="metric-sub">tokens</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Pool Dominance</div>
+      <div class="metric-value small text-purple">${fmtPct(pool.dominancePct)}</div>
+      <div class="metric-sub">of total TVL</div>
+    </div>
+  </div>`;
+
+  // Reserves visualization
+  html += `
+  <div class="grid-2 section slide-up stagger-3">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Reserve Composition</span>
+      </div>
+      <div class="reserves-viz">
+        <div class="reserves-viz-bar token0" style="width:${t0pct}%">${pool.token0Symbol} ${fmtPct(t0pct)}</div>
+        <div class="reserves-viz-bar token1" style="width:${100 - t0pct}%">${pool.token1Symbol} ${fmtPct(100 - t0pct)}</div>
+      </div>
+      <div class="grid-2 mt-16">
+        <div class="card" style="padding:16px;background:rgba(123,47,190,0.06)">
+          <div class="metric-label">${pool.token0Symbol} Reserve</div>
+          <div class="metric-value small">${fmtFull(pool.reserve0Num)}</div>
+          <div class="metric-sub">${fmtUsd(t0val)}</div>
+        </div>
+        <div class="card" style="padding:16px;background:rgba(6,182,212,0.06)">
+          <div class="metric-label">${pool.token1Symbol} Reserve</div>
+          <div class="metric-value small">${fmtFull(pool.reserve1Num)}</div>
+          <div class="metric-sub">${fmtUsd(t1val)}</div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Pool Analytics</span>
+      </div>
+      <div class="metric-row"><span class="text-muted text-sm">Price Ratio</span><span class="fw-600 text-sm">${pool.priceRatioLabel || 'N/A'}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">${pool.token0Symbol} Price</span><span class="fw-600 text-sm text-green">${fmtUsd(pool.token0PriceUsd)}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">${pool.token1Symbol} Price</span><span class="fw-600 text-sm text-green">${fmtUsd(pool.token1PriceUsd)}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">Constant Product (k)</span><span class="fw-600 text-sm mono">${k > 1e12 ? k.toExponential(4) : fmtFull(k)}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">kLast</span><span class="fw-600 text-sm mono">${pool.kLast && pool.kLast !== '0' ? (pool.kLast.length > 20 ? pool.kLast.slice(0,10) + '...' : pool.kLast) : 'N/A'}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">Last Update Block</span><span class="fw-600 text-sm">#${pool.blockTimestampLast || 'N/A'}</span></div>
+    </div>
+  </div>`;
+
+  // Token details
+  html += `
+  <div class="card section slide-up stagger-4">
+    <div class="card-header">
+      <span class="card-title">Pool Token Details</span>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr><th>Token</th><th class="text-right">Reserve</th><th class="text-right">Value (USD)</th><th class="text-right">Price (USD)</th><th class="text-right">Price (BTC)</th><th>Address</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>${pool.token0Symbol}</strong></td>
+          <td class="text-right">${fmtFull(pool.reserve0Num)}</td>
+          <td class="text-right text-green">${fmtUsd(t0val)}</td>
+          <td class="text-right">${fmtUsd(pool.token0PriceUsd)}</td>
+          <td class="text-right text-yellow">${fmtBtc(pool.token0PriceBtc)}</td>
+          <td class="mono text-muted text-sm">${fmtAddr(pool.token0Address)}</td>
+        </tr>
+        <tr>
+          <td><strong>${pool.token1Symbol}</strong></td>
+          <td class="text-right">${fmtFull(pool.reserve1Num)}</td>
+          <td class="text-right text-green">${fmtUsd(t1val)}</td>
+          <td class="text-right">${fmtUsd(pool.token1PriceUsd)}</td>
+          <td class="text-right text-yellow">${fmtBtc(pool.token1PriceBtc)}</td>
+          <td class="mono text-muted text-sm">${fmtAddr(pool.token1Address)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+
+  // LP Calculator section
+  html += `
+  <div class="card section slide-up stagger-5">
+    <div class="card-header">
+      <span class="card-title">LP Position Calculator</span>
+    </div>
+    <div class="grid-3">
+      <div>
+        <div class="metric-label">If you hold 1 LP Token</div>
+        <div class="metric-value small mt-8">${fmtUsd(lpValUsd)}</div>
+        <div class="metric-sub">
+          ${pool.lpSupplyNum > 0 ? fmtFull(pool.reserve0Num / pool.lpSupplyNum) : 0} ${pool.token0Symbol} +
+          ${pool.lpSupplyNum > 0 ? fmtFull(pool.reserve1Num / pool.lpSupplyNum) : 0} ${pool.token1Symbol}
+        </div>
+      </div>
+      <div>
+        <div class="metric-label">If you hold 1% of Pool</div>
+        <div class="metric-value small mt-8">${fmtUsd(tvlUsd * 0.01)}</div>
+        <div class="metric-sub">
+          ${fmtFull(pool.reserve0Num * 0.01)} ${pool.token0Symbol} +
+          ${fmtFull(pool.reserve1Num * 0.01)} ${pool.token1Symbol}
+        </div>
+      </div>
+      <div>
+        <div class="metric-label">Pool Depth (2% slippage)</div>
+        <div class="metric-value small mt-8">${fmtUsd(tvlUsd * 0.02)}</div>
+        <div class="metric-sub">Max trade size for ~2% price impact</div>
+      </div>
+    </div>
+  </div>`;
+
+  // Arbitrage Opportunity card
+  const arbData = DATA.arbitrage?.directArb?.find(a => a.poolAddress === addr);
+  if (arbData) {
+    const devClass = deviationClass(arbData.deviationPct);
+    html += `
+    <div class="card section slide-up stagger-6 ${arbData.isViable ? 'arb-viable' : ''}">
+      <div class="card-header">
+        <span class="card-title">Arbitrage Opportunity</span>
+        <span class="card-badge">${arbData.isViable ? 'Viable' : 'Low'}</span>
+      </div>
+      <div class="grid-3">
+        <div>
+          <div class="metric-label">Pool vs Oracle Deviation</div>
+          <div class="metric-value small ${impactClass(arbData.deviationPct)}">${fmtPct(arbData.deviationPct)}</div>
+          <div class="deviation-bar"><div class="deviation-fill ${devClass}" style="width:${Math.min(arbData.deviationPct * 2, 100)}%"></div></div>
+        </div>
+        <div>
+          <div class="metric-label">Direction</div>
+          <div class="mt-8">${arbData.action ? `<span class="arb-direction-badge sell">Sell ${arbData.sellToken}</span> <span class="arb-arrow">&#8594;</span> <span class="arb-direction-badge buy">Buy ${arbData.buyToken}</span>` : '<span class="arb-direction-badge neutral">Balanced</span>'}</div>
+        </div>
+        <div>
+          <div class="metric-label">Optimal Trade</div>
+          <div class="metric-value small text-green mt-8">${arbData.profitUsd > 0 ? fmtUsd(arbData.profitUsd) + ' profit' : 'No profit'}</div>
+          <div class="metric-sub">${arbData.optimalInput > 0 ? fmtNum(arbData.optimalInput) + ' ' + arbData.sellToken + ' (' + fmtUsd(arbData.optimalInputUsd) + ')' : ''}</div>
+        </div>
+      </div>
+      <div class="mt-16">
+        <div class="metric-row"><span class="text-muted text-sm">Pool Price (${pool.token0Symbol}/${pool.token1Symbol})</span><span class="fw-600 text-sm mono">${arbData.poolPrice.toFixed(6)}</span></div>
+        <div class="metric-row"><span class="text-muted text-sm">Oracle Price (${pool.token0Symbol}/${pool.token1Symbol})</span><span class="fw-600 text-sm mono">${arbData.oraclePrice.toFixed(6)}</span></div>
+        <div class="metric-row"><span class="text-muted text-sm">Expected Output</span><span class="fw-600 text-sm">${arbData.expectedOutput > 0 ? fmtNum(arbData.expectedOutput) + ' ' + arbData.buyToken + ' (' + fmtUsd(arbData.expectedOutputUsd) + ')' : '-'}</span></div>
+        <div class="metric-row"><span class="text-muted text-sm">ROI</span><span class="fw-600 text-sm ${arbData.profitPct > 0 ? 'text-green' : 'text-muted'}">${arbData.profitPct > 0 ? fmtPct(arbData.profitPct) : '-'}</span></div>
+      </div>
+    </div>`;
+  }
+
+  return html;
+}
+
+// ── Tokens List Page ────────────────────────────────────────────────────────
+function renderTokensList() {
+  let html = `
+  <div class="detail-header slide-up">
+    <div class="detail-title">Token Analytics</div>
+    <div class="detail-subtitle">All tokens on MotoSwap &middot; Prices derived from AMM pools</div>
+  </div>`;
+
+  // Table
+  html += `
+  <div class="card section slide-up stagger-1">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Token</th>
+          <th class="text-right">Price (USD)</th>
+          <th class="text-right">Price (BTC)</th>
+          <th class="text-right">Market Cap</th>
+          <th class="text-right">Circulating</th>
+          <th class="text-right">In Pools</th>
+          <th class="text-right">In Staking</th>
+          <th class="text-right">FDV</th>
+        </tr>
+      </thead>
+      <tbody>`;
+  for (const [sym, token] of Object.entries(DATA.tokens || {})) {
+    if (token.error) continue;
+    const dist = token.distribution || {};
+    html += `
+        <tr style="cursor:pointer" onclick="navigate('#/token/${sym}')">
+          <td><strong>${token.name}</strong> <span class="text-muted">${token.symbol}</span></td>
+          <td class="text-right text-green fw-600">${fmtUsd(token.priceUsd)}</td>
+          <td class="text-right text-yellow">${fmtBtc(token.priceBtc)}</td>
+          <td class="text-right">${fmtUsd(token.marketCapUsd)}</td>
+          <td class="text-right">${fmtNum(token.totalSupply)}</td>
+          <td class="text-right text-purple">${fmtPct(dist.inPoolsPct)}</td>
+          <td class="text-right text-purple">${fmtPct(dist.inStakingPct)}</td>
+          <td class="text-right text-muted">${fmtUsd(token.fdvUsd)}</td>
+        </tr>`;
+  }
+  html += `</tbody></table></div>`;
+
+  // Token cards
+  html += `<div class="grid-3 section slide-up stagger-2">`;
+  for (const [sym, token] of Object.entries(DATA.tokens || {})) {
+    if (token.error) continue;
+    html += renderTokenCard(sym, token);
+  }
+  html += `</div>`;
+
+  return html;
+}
+
+// ── Token Detail Page ───────────────────────────────────────────────────────
+function renderTokenDetail(sym) {
+  const token = DATA.tokens?.[sym];
+  if (!token) return `<div class="card"><p>Token not found</p></div>`;
+  const dist = token.distribution || {};
+
+  let html = `
+  <div class="slide-up">
+    <button class="back-btn" onclick="navigate('#/tokens')">&#8592; Back to Tokens</button>
+  </div>
+  <div class="detail-header slide-up stagger-1">
+    <div class="detail-title">${token.name} (${token.symbol})</div>
+    <div class="detail-subtitle">OP-20 Token on OPNet</div>
+    <div class="detail-address">${token.address}</div>
+  </div>`;
+
+  // Hero metrics
+  html += `
+  <div class="grid-4 section slide-up stagger-2">
+    <div class="card">
+      <div class="card-title mb-8">Price</div>
+      <div class="metric-value text-green">${fmtUsd(token.priceUsd)}</div>
+      <div class="metric-sub text-yellow">${fmtBtc(token.priceBtc)}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Market Cap</div>
+      <div class="metric-value small">${fmtUsd(token.marketCapUsd)}</div>
+      <div class="metric-sub text-yellow">${fmtBtc(token.marketCapBtc)}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">In Protocol</div>
+      <div class="metric-value small text-purple">${fmtPct((token.distribution?.inPoolsPct || 0) + (token.distribution?.inStakingPct || 0))}</div>
+      <div class="metric-sub">of circ. supply in pools + staking</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">FDV</div>
+      <div class="metric-value small text-muted">${fmtUsd(token.fdvUsd)}</div>
+      <div class="metric-sub text-muted">${fmtPct(token.pctMinted)} minted</div>
+    </div>
+  </div>`;
+
+  // Supply + Distribution
+  html += `
+  <div class="grid-2 section slide-up stagger-3">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Supply Breakdown</span>
+      </div>
+      <div class="metric-row"><span class="text-muted text-sm">Circulating Supply</span><span class="fw-700">${fmtFull(token.totalSupply)} ${sym}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">In Liquidity Pools</span><span class="fw-600 text-purple">${fmtFull(token.distribution?.inPools || 0)} ${sym} (${fmtPct(token.distribution?.inPoolsPct)})</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">In Staking</span><span class="fw-600 text-purple">${fmtFull(token.distribution?.inStaking || 0)} ${sym} (${fmtPct(token.distribution?.inStakingPct)})</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">Free / Wallets</span><span class="fw-600">${fmtFull(token.distribution?.free || 0)} ${sym} (${fmtPct(token.distribution?.freePct)})</span></div>
+      <div class="metric-row" style="border-top:1px solid var(--border-color);margin-top:8px;padding-top:12px"><span class="text-muted text-sm">Maximum Supply</span><span class="fw-600 text-muted">${fmtFull(token.maxSupply)} ${sym}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">Unminted</span><span class="fw-600 text-muted">${fmtFull(token.maxSupply - token.totalSupply)} ${sym}</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">Decimals</span><span class="fw-600">${token.decimals}</span></div>
+      ${token.nativeSwapBtcReserve ? `<div class="metric-row"><span class="text-muted text-sm">NativeSwap BTC Reserve</span><span class="fw-600 text-yellow">${token.nativeSwapBtcReserve.toFixed(4)} BTC</span></div>` : ''}
+      ${token.nativeSwapLiquidity ? `<div class="metric-row"><span class="text-muted text-sm">NativeSwap Liquidity</span><span class="fw-600">${fmtNum(token.nativeSwapLiquidity)} ${sym}</span></div>` : ''}
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Distribution</span>
+      </div>
+      <div class="dist-ring-container">
+        <div class="dist-ring-wrap"><canvas id="token-dist-pie"></canvas></div>
+        <div class="dist-legend">
+          <div class="dist-legend-item">
+            <div class="dist-legend-color" style="background:var(--primary)"></div>
+            <span class="dist-legend-label">In Pools</span>
+            <span class="dist-legend-value">${fmtPct(dist.inPoolsPct)}</span>
+          </div>
+          <div class="dist-legend-item">
+            <div class="dist-legend-color" style="background:var(--cyan)"></div>
+            <span class="dist-legend-label">In Staking</span>
+            <span class="dist-legend-value">${fmtPct(dist.inStakingPct)}</span>
+          </div>
+          <div class="dist-legend-item">
+            <div class="dist-legend-color" style="background:var(--text-muted)"></div>
+            <span class="dist-legend-label">Free / Wallets</span>
+            <span class="dist-legend-value">${fmtPct(dist.freePct)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  // Pools this token is in
+  const tokenPools = (DATA.pools || []).filter(p => !p.error && (p.token0Symbol === sym || p.token1Symbol === sym));
+  if (tokenPools.length > 0) {
+    html += `
+    <div class="card section slide-up stagger-4">
+      <div class="card-header">
+        <span class="card-title">${sym} in Liquidity Pools</span>
+        <span class="card-badge">${tokenPools.length} pools</span>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Pool</th><th class="text-right">${sym} Locked</th><th class="text-right">Value (USD)</th><th class="text-right">Pool TVL</th></tr></thead>
+        <tbody>`;
+    for (const pool of tokenPools) {
+      const isToken0 = pool.token0Symbol === sym;
+      const reserve = isToken0 ? pool.reserve0Num : pool.reserve1Num;
+      const value = reserve * (token.priceUsd || 0);
+      html += `
+        <tr style="cursor:pointer" onclick="navigate('#/pool/${pool.poolAddress}')">
+          <td><strong>${pool.pairLabel}</strong></td>
+          <td class="text-right">${fmtFull(reserve)} ${sym}</td>
+          <td class="text-right text-green">${fmtUsd(value)}</td>
+          <td class="text-right">${fmtUsd(pool.tvlUsd)}</td>
+        </tr>`;
+    }
+    html += `</tbody></table></div>`;
+  }
+
+  // Staking info for this token
+  const stakeInfo = DATA.staking?.balances?.[sym] || {};
+  const stakeBal = stakeInfo.amount || 0;
+  const stakeBalUsd = stakeInfo.usd || 0;
+  if (stakeBal > 0) {
+    html += `
+    <div class="card section slide-up stagger-5">
+      <div class="card-header"><span class="card-title">${sym} in Staking</span></div>
+      <div class="grid-3">
+        <div>
+          <div class="metric-label">Amount Staked/Held</div>
+          <div class="metric-value small">${fmtFull(stakeBal)} ${sym}</div>
+        </div>
+        <div>
+          <div class="metric-label">Value (USD)</div>
+          <div class="metric-value small text-green">${fmtUsd(stakeBalUsd)}</div>
+        </div>
+        <div>
+          <div class="metric-label">% of Supply</div>
+          <div class="metric-value small text-purple">${fmtPct(token.totalSupply > 0 ? (stakeBal / token.totalSupply) * 100 : 0)}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  return html;
+}
+
+// ── Staking Detail Page ─────────────────────────────────────────────────────
+function renderStakingDetail() {
+  const staking = DATA.staking || {};
+  const tvl = DATA.tvl?.staking || {};
+
+  let html = `
+  <div class="detail-header slide-up">
+    <div class="detail-title">MotoSwap Staking</div>
+    <div class="detail-subtitle">Single-sided MOTO staking with multi-token rewards</div>
+    <div class="detail-address">${staking.address || ''}</div>
+  </div>`;
+
+  // Hero
+  html += `
+  <div class="grid-3 section slide-up stagger-1">
+    <div class="card">
+      <div class="card-title mb-8">Staking TVL</div>
+      <div class="metric-value text-green">${fmtUsd(tvl.usd)}</div>
+      <div class="metric-sub text-yellow">${fmtBtc(tvl.btc)}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Total MOTO Staked</div>
+      <div class="metric-value small">${fmtFull(staking.totalStaked)}</div>
+      <div class="metric-sub">tokens</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">% of MOTO Supply Staked</div>
+      <div class="metric-value small text-purple">${fmtPct(DATA.tokens?.MOTO?.totalSupply > 0 ? (staking.totalStaked / DATA.tokens.MOTO.totalSupply) * 100 : 0)}</div>
+      <div class="progress-bar mt-8"><div class="progress-fill purple" style="width:${DATA.tokens?.MOTO?.totalSupply > 0 ? (staking.totalStaked / DATA.tokens.MOTO.totalSupply) * 100 : 0}%"></div></div>
+    </div>
+  </div>`;
+
+  // Token balances in staking
+  html += `
+  <div class="grid-2 section slide-up stagger-2">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Token Balances in Staking</span>
+      </div>
+      <table class="data-table">
+        <thead><tr><th>Token</th><th class="text-right">Balance</th><th class="text-right">Value (USD)</th><th class="text-right">Value (BTC)</th></tr></thead>
+        <tbody>`;
+  const balances = staking.balances || {};
+  for (const [sym, info] of Object.entries(balances)) {
+    html += `
+        <tr style="cursor:pointer" onclick="navigate('#/token/${sym}')">
+          <td><strong>${sym}</strong></td>
+          <td class="text-right">${fmtFull(info.amount || 0)}</td>
+          <td class="text-right text-green">${fmtUsd(info.usd || 0)}</td>
+          <td class="text-right text-yellow">${fmtBtc(info.btc || 0)}</td>
+        </tr>`;
+  }
+  html += `</tbody></table>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Staking Composition</span>
+      </div>
+      <div class="dist-ring-container">
+        <div class="dist-ring-wrap"><canvas id="staking-pie"></canvas></div>
+        <div class="dist-legend">`;
+  const tokenColors = ['var(--primary)', 'var(--green)', 'var(--cyan)', 'var(--yellow)', 'var(--orange)'];
+  let colorIdx = 0;
+  for (const [sym, info] of Object.entries(balances)) {
+    const val = info.usd || 0;
+    const pct = tvl.usd > 0 ? (val / tvl.usd) * 100 : 0;
+    html += `
+          <div class="dist-legend-item">
+            <div class="dist-legend-color" style="background:${tokenColors[colorIdx % tokenColors.length]}"></div>
+            <span class="dist-legend-label">${sym}</span>
+            <span class="dist-legend-value">${fmtPct(pct)}</span>
+          </div>`;
+    colorIdx++;
+  }
+  html += `</div></div>
+    </div>
+  </div>`;
+
+  // Reward Tokens
+  if (staking.rewardTokens?.length > 0) {
+    html += `
+    <div class="card section slide-up stagger-3">
+      <div class="card-header">
+        <span class="card-title">Reward Tokens</span>
+        <span class="card-badge">${staking.rewardTokens.length} tokens</span>
+      </div>
+      <div class="grid-3">`;
+    for (const rt of staking.rewardTokens) {
+      const tokenData = DATA.tokens?.[rt.symbol] || {};
+      html += `
+        <div style="cursor:pointer" onclick="navigate('#/token/${rt.symbol}')">
+          <div class="metric-label">${rt.symbol}</div>
+          <div class="metric-value small">${tokenData.name || rt.symbol}</div>
+          <div class="metric-sub mono text-muted">${fmtAddr(rt.address)}</div>
+        </div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  return html;
+}
+
+// ── Farming Detail Page ─────────────────────────────────────────────────────
+function renderFarmingDetail() {
+  const farming = DATA.farming || {};
+  const farmingTvl = DATA.tvl?.farming || {};
+  const chefs = farming.motoChefs || [];
+
+  let html = `
+  <div class="detail-header slide-up">
+    <div class="detail-title">Yield Farming (MotoChef)</div>
+    <div class="detail-subtitle">LP token farming for MOTO rewards &middot; ${chefs.length} active farm${chefs.length !== 1 ? 's' : ''}</div>
+  </div>`;
+
+  // Hero metrics
+  html += `
+  <div class="grid-4 section slide-up stagger-1">
+    <div class="card">
+      <div class="card-title mb-8">Farming TVL</div>
+      <div class="metric-value text-orange">${fmtUsd(farmingTvl.usd)}</div>
+      <div class="metric-sub text-yellow">${fmtBtc(farmingTvl.btc)}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Active Farms</div>
+      <div class="metric-value">${chefs.length}</div>
+      <div class="metric-sub">MotoChef contracts</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Total Farm Pools</div>
+      <div class="metric-value">${chefs.reduce((sum, c) => sum + c.pools.length, 0)}</div>
+      <div class="metric-sub">across all farms</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">BTC Staked in Farms</div>
+      <div class="metric-value text-yellow">${chefs.reduce((sum, c) => sum + c.totalBtcStaked, 0).toFixed(8)}</div>
+      <div class="metric-sub">BTC</div>
+    </div>
+  </div>`;
+
+  // Per-MotoChef breakdown
+  for (const chef of chefs) {
+    const rewardPrice = DATA.prices?.[chef.rewardToken] || {};
+    const emissionUsd = chef.motoPerBlock * (rewardPrice.usd || 0);
+    const currentBlock = DATA.chain?.blockNumber || 0;
+    const bonusActive = currentBlock < chef.bonusEndBlock;
+
+    html += `
+    <div class="card section slide-up stagger-2">
+      <div class="card-header">
+        <span class="card-title">${chef.rewardToken} Farm</span>
+        <span class="card-badge">${bonusActive ? chef.bonusMultiplier + 'x Bonus Active' : 'Normal Emissions'}</span>
+      </div>
+      <div class="detail-address mb-8">${chef.address}</div>
+
+      <div class="grid-4 mb-16">
+        <div>
+          <div class="metric-label">Farm TVL</div>
+          <div class="metric-value small text-orange">${fmtUsd(chef.tvlUsd)}</div>
+        </div>
+        <div>
+          <div class="metric-label">${chef.rewardToken}/Block</div>
+          <div class="metric-value small">${fmtNum(chef.motoPerBlock)}</div>
+          <div class="metric-sub text-green">${fmtUsd(emissionUsd)}/block</div>
+        </div>
+        <div>
+          <div class="metric-label">Total Alloc Points</div>
+          <div class="metric-value small">${fmtNum(chef.totalAllocPoint, 0)}</div>
+        </div>
+        <div>
+          <div class="metric-label">Bonus End Block</div>
+          <div class="metric-value small">#${fmtNum(chef.bonusEndBlock, 0)}</div>
+          <div class="metric-sub">${bonusActive ? 'In ' + fmtNum(chef.bonusEndBlock - currentBlock, 0) + ' blocks' : 'Ended'}</div>
+        </div>
+      </div>`;
+
+    // BTC staking in this farm
+    if (chef.totalBtcStaked > 0) {
+      html += `
+      <div class="card mb-16" style="background:rgba(234,179,8,0.06);border-color:rgba(234,179,8,0.2)">
+        <div class="grid-3">
+          <div>
+            <div class="metric-label">BTC Staked</div>
+            <div class="metric-value small text-yellow">${chef.totalBtcStaked.toFixed(8)} BTC</div>
+          </div>
+          <div>
+            <div class="metric-label">Value (USD)</div>
+            <div class="metric-value small text-green">${fmtUsd(chef.totalBtcStakedUsd)}</div>
+          </div>
+          <div>
+            <div class="metric-label">BTC Pool Weight</div>
+            <div class="metric-value small">${chef.pools.find(p => p.poolType === 'btc') ? fmtPct(chef.pools.find(p => p.poolType === 'btc').allocPct) : 'N/A'}</div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // Farm pools table
+    if (chef.pools.length > 0) {
+      html += `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Pool ID</th>
+            <th>LP / Token</th>
+            <th>Type</th>
+            <th class="text-right">LP Staked</th>
+            <th class="text-right">TVL (USD)</th>
+            <th class="text-right">TVL (BTC)</th>
+            <th class="text-right">Alloc Points</th>
+            <th class="text-right">Weight</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      for (const fp of chef.pools) {
+        const isLP = fp.poolType === 'lp';
+        html += `
+          <tr${isLP ? ' style="cursor:pointer" onclick="navigate(\'#/pool/' + fp.lpTokenAddress + '\')"' : ''}>
+            <td><strong>#${fp.poolId}</strong></td>
+            <td>${fp.pairLabel}${fp.poolType === 'single' ? ' (single)' : fp.poolType === 'lp' ? ' LP' : ''}</td>
+            <td><span class="card-badge">${fp.poolType}</span></td>
+            <td class="text-right">${fmtNum(fp.lpStaked)}</td>
+            <td class="text-right text-green fw-600">${fmtUsd(fp.tvlUsd)}</td>
+            <td class="text-right text-yellow">${fmtBtc(fp.tvlBtc)}</td>
+            <td class="text-right">${fmtNum(fp.allocPoint, 0)}</td>
+            <td class="text-right text-orange fw-600">${fmtPct(fp.allocPct)}</td>
+          </tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+
+    if (chef.errors.length > 0) {
+      html += `<div class="mt-8 text-sm text-muted">Errors: ${chef.errors.join('; ')}</div>`;
+    }
+
+    html += `</div>`;
+  }
+
+  // No farms found
+  if (chefs.length === 0) {
+    html += `
+    <div class="card section slide-up stagger-2">
+      <div style="text-align:center;padding:40px 0">
+        <div class="text-muted" style="font-size:1.1rem">No active MotoChef farms found</div>
+        <div class="text-muted text-sm mt-8">Farms will appear here when MotoChef contracts are deployed via the MotoChef Factory</div>
+      </div>
+    </div>`;
+  }
+
+  if (farming.errors?.length > 0) {
+    html += `<div class="card section text-sm text-muted">Farming errors: ${farming.errors.join('; ')}</div>`;
+  }
+
+  return html;
+}
+
+// ── Arbitrage Page ──────────────────────────────────────────────────────────
+function impactClass(pct) {
+  if (pct < 1) return 'impact-low';
+  if (pct < 5) return 'impact-med';
+  if (pct < 10) return 'impact-high';
+  return 'impact-extreme';
+}
+
+function deviationClass(pct) {
+  if (pct < 1) return 'low';
+  if (pct < 5) return 'med';
+  if (pct < 10) return 'high';
+  return 'extreme';
+}
+
+function renderArbitrage() {
+  const arb = DATA.arbitrage || {};
+  const summary = arb.summary || {};
+  const directArb = arb.directArb || [];
+  const triangularArb = arb.triangularArb || [];
+  const priceImpact = arb.priceImpact || [];
+  const liquidityDepth = arb.liquidityDepth || [];
+
+  let html = `
+  <div class="detail-header slide-up">
+    <div class="detail-title">Arbitrage Analysis</div>
+    <div class="detail-subtitle">MotoSwap pool prices vs NativeSwap oracle prices &middot; Mispricings and opportunities</div>
+  </div>`;
+
+  // 1. Hero metrics
+  const bestTri = summary.bestTriArb;
+  html += `
+  <div class="grid-4 section slide-up stagger-1">
+    <div class="card">
+      <div class="card-title mb-8">Total Arb Profit Available</div>
+      <div class="metric-value text-green">${fmtUsd(summary.totalProfitAvailable)}</div>
+      <div class="metric-sub">${summary.viableCount || 0} viable opportunities</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Max Pool Deviation</div>
+      <div class="metric-value ${summary.maxDeviation > 5 ? 'text-orange' : 'text-yellow'}">${fmtPct(summary.maxDeviation)}</div>
+      <div class="metric-sub">from oracle price</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Best Tri-Arb</div>
+      <div class="metric-value small ${bestTri && bestTri.profitUsd > 0 ? 'text-green' : 'text-muted'}">${bestTri ? fmtUsd(bestTri.profitUsd) : 'None'}</div>
+      <div class="metric-sub">${bestTri ? bestTri.label : 'No profitable cycles'}</div>
+    </div>
+    <div class="card">
+      <div class="card-title mb-8">Avg Imbalance</div>
+      <div class="metric-value text-purple">${fmtPct(summary.avgDeviation)}</div>
+      <div class="metric-sub">across ${summary.totalPools || 0} pools</div>
+    </div>
+  </div>`;
+
+  // 2. Direct Arb table
+  html += `
+  <div class="section-title slide-up stagger-2">Direct Arbitrage Opportunities</div>
+  <div class="card section slide-up stagger-2">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Pool</th>
+          <th class="text-right">Pool Price</th>
+          <th class="text-right">Oracle Price</th>
+          <th class="text-right">Deviation</th>
+          <th>Action</th>
+          <th class="text-right">Optimal Size</th>
+          <th class="text-right">Profit</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>`;
+  const sortedArb = [...directArb].sort((a, b) => b.deviationPct - a.deviationPct);
+  for (const a of sortedArb) {
+    const devClass = deviationClass(a.deviationPct);
+    html += `
+        <tr style="cursor:pointer" onclick="navigate('#/pool/${a.poolAddress}')">
+          <td><strong>${a.pool}</strong></td>
+          <td class="text-right mono text-sm">${a.poolPrice > 0 ? a.poolPrice.toFixed(6) : '-'}</td>
+          <td class="text-right mono text-sm">${a.oraclePrice > 0 ? a.oraclePrice.toFixed(6) : '-'}</td>
+          <td class="text-right fw-600 ${impactClass(a.deviationPct)}">${fmtPct(a.deviationPct)}</td>
+          <td>${a.action ? `<span class="arb-direction-badge sell">${a.action}</span>` : '<span class="arb-direction-badge neutral">Balanced</span>'}</td>
+          <td class="text-right">${a.optimalInput > 0 ? fmtNum(a.optimalInput) + ' ' + a.sellToken : '-'}<br><span class="text-muted text-sm">${a.optimalInputUsd > 0 ? fmtUsd(a.optimalInputUsd) : ''}</span></td>
+          <td class="text-right fw-600 ${a.profitUsd > 0 ? 'text-green' : 'text-muted'}">${a.profitUsd > 0 ? fmtUsd(a.profitUsd) : '-'}<br><span class="text-muted text-sm">${a.profitPct > 0 ? fmtPct(a.profitPct) + ' ROI' : ''}</span></td>
+          <td>${a.isViable ? '<span class="arb-direction-badge buy">Viable</span>' : '<span class="arb-direction-badge neutral">Low</span>'}</td>
+        </tr>`;
+  }
+  html += `</tbody></table></div>`;
+
+  // 3. Direct Arb detail cards
+  html += `<div class="grid-3 section slide-up stagger-3">`;
+  for (const a of sortedArb) {
+    const devClass = deviationClass(a.deviationPct);
+    html += `
+    <div class="card ${a.isViable ? 'arb-viable' : 'arb-not-viable'}">
+      <div class="card-header">
+        <span class="card-title">${a.pool}</span>
+        <span class="card-badge">${fmtPct(a.deviationPct)} off</span>
+      </div>
+      ${a.action ? `
+      <div style="margin-bottom:12px">
+        <span class="arb-direction-badge sell">Sell ${a.sellToken}</span>
+        <span class="arb-arrow">&#8594;</span>
+        <span class="arb-direction-badge buy">Buy ${a.buyToken}</span>
+      </div>
+      <div class="metric-row"><span class="text-muted text-sm">Optimal Input</span><span class="fw-600 text-sm">${fmtNum(a.optimalInput)} ${a.sellToken} (${fmtUsd(a.optimalInputUsd)})</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">Expected Output</span><span class="fw-600 text-sm">${fmtNum(a.expectedOutput)} ${a.buyToken} (${fmtUsd(a.expectedOutputUsd)})</span></div>
+      <div class="metric-row"><span class="text-muted text-sm">Net Profit</span><span class="fw-700 text-sm text-green">${fmtUsd(a.profitUsd)} (${fmtPct(a.profitPct)})</span></div>
+      ` : '<div class="text-muted text-sm" style="padding:12px 0">Pool is near equilibrium</div>'}
+      <div class="deviation-bar"><div class="deviation-fill ${devClass}" style="width:${Math.min(a.deviationPct * 2, 100)}%"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px">
+        <span class="text-muted" style="font-size:0.68rem">0%</span>
+        <span class="text-muted" style="font-size:0.68rem">50%</span>
+      </div>
+    </div>`;
+  }
+  html += `</div>`;
+
+  // 4. Triangular Arb section
+  if (triangularArb.length > 0) {
+    html += `<div class="section-title slide-up stagger-4">Triangular Arbitrage</div>`;
+    // Sort by profit, show best first
+    const sortedTri = [...triangularArb].sort((a, b) => b.profitUsd - a.profitUsd);
+    html += `<div class="grid-2 section slide-up stagger-4">`;
+    for (const tri of sortedTri) {
+      const steps = tri.steps || [];
+      html += `
+      <div class="card ${tri.isViable ? 'arb-viable' : 'arb-not-viable'}">
+        <div class="card-header">
+          <span class="card-title">${tri.direction === 'clockwise' ? 'Clockwise' : 'Counter-CW'}</span>
+          <span class="card-badge ${tri.profitUsd > 0 ? '' : ''}">${tri.profitUsd > 0 ? '+' : ''}${fmtUsd(tri.profitUsd)}</span>
+        </div>
+        <div class="tri-arb-cycle">`;
+      const toks = tri.tokens || [];
+      for (let t = 0; t < toks.length; t++) {
+        html += `<span class="cycle-token">${toks[t]}</span>`;
+        html += `<span class="cycle-arrow">&#8594;</span>`;
+      }
+      html += `<span class="cycle-token">${toks[0] || ''}</span>`;
+      html += `</div>`;
+
+      // Step-by-step breakdown
+      for (let s = 0; s < steps.length; s++) {
+        const step = steps[s];
+        if (s === 0) {
+          html += `<div class="tri-arb-step"><span class="step-num">IN</span><span class="fw-600">${fmtNum(step.amount)} ${step.token}</span><span class="text-muted text-sm">(${fmtUsd(step.amount * (DATA.prices?.[step.token]?.usd || 0))})</span></div>`;
+        } else {
+          html += `<div class="tri-arb-step"><span class="step-num">${s}</span><span class="text-muted text-sm">via ${step.pool}</span><span class="arb-arrow">&#8594;</span><span class="fw-600">${fmtNum(step.amount)} ${step.token}</span></div>`;
+        }
+      }
+
+      html += `
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-color)">
+          <div class="metric-row"><span class="text-muted text-sm">Optimal Input</span><span class="fw-600 text-sm">${fmtNum(tri.optimalInput)} ${toks[0]} (${fmtUsd(tri.optimalInputUsd)})</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">Final Output</span><span class="fw-600 text-sm">${fmtNum(tri.finalOutput)} ${toks[0]}</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">Net P/L</span><span class="fw-700 text-sm ${tri.profitUsd > 0 ? 'text-green' : 'text-red'}">${tri.profitUsd > 0 ? '+' : ''}${fmtUsd(tri.profitUsd)} (${tri.profitPct > 0 ? '+' : ''}${fmtPct(tri.profitPct)})</span></div>
+        </div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  // 5. Price Impact section
+  if (priceImpact.length > 0) {
+    html += `<div class="section-title slide-up stagger-5">Price Impact Analysis</div>`;
+    for (const pool of priceImpact) {
+      // Group sells by direction
+      const directions = {};
+      for (const s of pool.sells) {
+        if (!directions[s.direction]) directions[s.direction] = [];
+        directions[s.direction].push(s);
+      }
+      html += `
+      <div class="card section slide-up stagger-5">
+        <div class="card-header">
+          <span class="card-title">${pool.pool} - Price Impact</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>Direction</th><th class="text-right">Trade Size</th><th class="text-right">Output</th><th class="text-right">Impact</th><th class="text-right">Slippage Cost</th></tr>
+          </thead>
+          <tbody>`;
+      for (const [dir, sells] of Object.entries(directions)) {
+        for (const s of sells) {
+          const ic = impactClass(s.impactPct);
+          html += `
+            <tr>
+              <td>${dir}</td>
+              <td class="text-right">${fmtUsd(s.sizeUsd)}</td>
+              <td class="text-right">${fmtUsd(s.outputUsd)}</td>
+              <td class="text-right fw-600 ${ic}">${fmtPct(s.impactPct)}</td>
+              <td class="text-right ${s.slippageUsd > 0 ? 'text-red' : 'text-green'}">${fmtUsd(Math.abs(s.slippageUsd))}</td>
+            </tr>`;
+        }
+      }
+      html += `</tbody></table></div>`;
+    }
+
+    // Price Impact chart
+    html += `
+    <div class="card section slide-up stagger-5">
+      <div class="card-header">
+        <span class="card-title">Slippage Curves</span>
+        <span class="card-badge">All Pools</span>
+      </div>
+      <div class="chart-container"><canvas id="impact-chart"></canvas></div>
+    </div>`;
+  }
+
+  // 6. Liquidity Depth cards
+  if (liquidityDepth.length > 0) {
+    html += `<div class="section-title slide-up stagger-6">Liquidity Depth</div>`;
+    html += `<div class="grid-3 section slide-up stagger-6">`;
+    for (const pool of liquidityDepth) {
+      html += `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">${pool.pool}</span>
+        </div>`;
+      for (const d of pool.depths) {
+        html += `
+        <div style="margin-bottom:12px">
+          <div class="metric-label">Max trade at ${d.impactPct}% impact</div>
+          <div class="metric-row"><span class="text-muted text-sm">Sell ${pool.token0}</span><span class="fw-600 text-sm">${fmtNum(d.maxToken0)} (${fmtUsd(d.maxToken0Usd)})</span></div>
+          <div class="metric-row"><span class="text-muted text-sm">Sell ${pool.token1}</span><span class="fw-600 text-sm">${fmtNum(d.maxToken1)} (${fmtUsd(d.maxToken1Usd)})</span></div>
+        </div>`;
+      }
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  return html;
+}
+
+// ── Chart Initialization ────────────────────────────────────────────────────
+function initCharts(route) {
+  if (route === '#/' || route === '' || route === '#') {
+    initTvlChart();
+    initTvlPie();
+  } else if (route === '#/pools') {
+    initPoolsMiniPie();
+  } else if (route.startsWith('#/token/')) {
+    const sym = route.replace('#/token/', '');
+    initTokenDistPie(sym);
+  } else if (route === '#/staking') {
+    initStakingPie();
+  } else if (route === '#/arbitrage') {
+    initImpactChart();
+  }
+}
+
+function chartColors() {
+  return {
+    purple: '#A855F7',
+    purpleFade: 'rgba(168, 85, 247, 0.1)',
+    green: '#22C55E',
+    greenFade: 'rgba(34, 197, 94, 0.1)',
+    cyan: '#06B6D4',
+    cyanFade: 'rgba(6, 182, 212, 0.1)',
+    yellow: '#EAB308',
+    blue: '#3B82F6',
+    orange: '#F97316',
+    pink: '#EC4899',
+    muted: '#6B6B80',
+    border: 'rgba(123, 47, 190, 0.2)',
+    grid: 'rgba(123, 47, 190, 0.08)',
+    text: '#A0A0B8',
+  };
+}
+
+function initTvlChart() {
+  const canvas = document.getElementById('tvl-chart');
+  if (!canvas) return;
+  const c = chartColors();
+
+  const labels = HISTORY.map(h => fmtDate(h.t));
+  const tvlData = HISTORY.map(h => h.totalTvlUsd);
+  const poolsData = HISTORY.map(h => h.poolsTvlUsd);
+  const stakingData = HISTORY.map(h => h.stakingTvlUsd);
+  const farmingData = HISTORY.map(h => h.farmingTvlUsd || 0);
+
+  chartInstances['tvl-chart'] = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Total TVL',
+          data: tvlData,
+          borderColor: c.purple,
+          backgroundColor: c.purpleFade,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 2,
+        },
+        {
+          label: 'Pools TVL',
+          data: poolsData,
+          borderColor: c.green,
+          backgroundColor: c.greenFade,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 1.5,
+        },
+        {
+          label: 'Staking TVL',
+          data: stakingData,
+          borderColor: c.cyan,
+          backgroundColor: c.cyanFade,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 1.5,
+        },
+        {
+          label: 'Farming TVL',
+          data: farmingData,
+          borderColor: c.orange,
+          backgroundColor: 'rgba(249, 115, 22, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          borderWidth: 1.5,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: c.text, font: { family: "'Poppins', sans-serif", size: 11 }, boxWidth: 12, padding: 16 },
+        },
+        tooltip: {
+          backgroundColor: 'rgba(18,18,28,0.95)',
+          borderColor: c.border,
+          borderWidth: 1,
+          titleColor: '#F0F0F5',
+          bodyColor: '#A0A0B8',
+          titleFont: { family: "'Poppins', sans-serif", weight: '600' },
+          bodyFont: { family: "'Poppins', sans-serif" },
+          callbacks: {
+            label: ctx => ctx.dataset.label + ': ' + fmtUsd(ctx.raw),
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: c.grid },
+          ticks: { color: c.muted, font: { family: "'Poppins', sans-serif", size: 10 }, maxTicksLimit: 8 },
+        },
+        y: {
+          grid: { color: c.grid },
+          ticks: {
+            color: c.muted,
+            font: { family: "'Poppins', sans-serif", size: 10 },
+            callback: v => fmtUsd(v),
+          },
+        },
+      },
+    },
+  });
+}
+
+function initTvlPie() {
+  const canvas = document.getElementById('tvl-pie');
+  if (!canvas) return;
+  const c = chartColors();
+
+  const pools = DATA.pools?.filter(p => !p.error) || [];
+  const stakingVal = DATA.tvl?.staking?.usd || 0;
+  const farmingVal = DATA.tvl?.farming?.usd || 0;
+
+  const labels = [...pools.map(p => p.pairLabel), 'Staking'];
+  const values = [...pools.map(p => p.tvlUsd || 0), stakingVal];
+  if (farmingVal > 0) { labels.push('Farming'); values.push(farmingVal); }
+  const colors = [c.purple, c.green, c.cyan, c.yellow, c.orange, c.pink, c.blue];
+
+  chartInstances['tvl-pie'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors.slice(0, labels.length),
+        borderColor: 'rgba(10,10,15,0.8)',
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(18,18,28,0.95)',
+          borderColor: c.border,
+          borderWidth: 1,
+          titleColor: '#F0F0F5',
+          bodyColor: '#A0A0B8',
+          callbacks: { label: ctx => ctx.label + ': ' + fmtUsd(ctx.raw) },
+        },
+      },
+    },
+  });
+
+  // Render legend
+  const legendEl = document.getElementById('tvl-pie-legend');
+  if (legendEl) {
+    legendEl.innerHTML = labels.map((label, i) => `
+      <div class="dist-legend-item">
+        <div class="dist-legend-color" style="background:${colors[i]}"></div>
+        <span class="dist-legend-label">${label}</span>
+        <span class="dist-legend-value">${fmtUsd(values[i])}</span>
+      </div>
+    `).join('');
+  }
+}
+
+function initPoolsMiniPie() {
+  const canvas = document.getElementById('pools-mini-pie');
+  if (!canvas) return;
+  const c = chartColors();
+  const pools = DATA.pools?.filter(p => !p.error) || [];
+  const colors = [c.purple, c.green, c.cyan];
+
+  chartInstances['pools-mini-pie'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: pools.map(p => p.pairLabel),
+      datasets: [{
+        data: pools.map(p => p.tvlUsd || 0),
+        backgroundColor: colors,
+        borderColor: 'rgba(10,10,15,0.8)',
+        borderWidth: 1,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '55%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmtUsd(ctx.raw) } } },
+    },
+  });
+}
+
+function initTokenDistPie(sym) {
+  const canvas = document.getElementById('token-dist-pie');
+  if (!canvas) return;
+  const token = DATA.tokens?.[sym];
+  if (!token?.distribution) return;
+  const c = chartColors();
+  const dist = token.distribution;
+
+  chartInstances['token-dist-pie'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['In Pools', 'In Staking', 'Free / Wallets'],
+      datasets: [{
+        data: [dist.inPools, dist.inStaking, dist.free],
+        backgroundColor: [c.purple, c.cyan, c.muted],
+        borderColor: 'rgba(10,10,15,0.8)',
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmtFull(ctx.raw) + ' ' + sym } },
+      },
+    },
+  });
+}
+
+function initStakingPie() {
+  const canvas = document.getElementById('staking-pie');
+  if (!canvas) return;
+  const c = chartColors();
+  const balances = DATA.staking?.balances || {};
+  const colorList = [c.purple, c.green, c.cyan, c.yellow, c.orange];
+
+  const labels = Object.keys(balances);
+  const values = labels.map(sym => balances[sym]?.usd || 0);
+  const bgColors = labels.map((_, i) => colorList[i % colorList.length]);
+
+  chartInstances['staking-pie'] = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: bgColors,
+        borderColor: 'rgba(10,10,15,0.8)',
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.label + ': ' + fmtUsd(ctx.raw) } } },
+    },
+  });
+}
+
+function initImpactChart() {
+  const canvas = document.getElementById('impact-chart');
+  if (!canvas) return;
+  const c = chartColors();
+  const priceImpact = DATA.arbitrage?.priceImpact || [];
+  if (priceImpact.length === 0) return;
+
+  const tradeSizes = [100, 1000, 10000, 100000];
+  const labels = tradeSizes.map(s => fmtUsd(s));
+  const poolColors = [c.purple, c.green, c.cyan, c.yellow, c.orange, c.pink];
+  const datasets = [];
+  let colorIdx = 0;
+
+  for (const pool of priceImpact) {
+    // Group by direction, just take first direction for each pool for the chart
+    const directions = {};
+    for (const s of pool.sells) {
+      if (!directions[s.direction]) directions[s.direction] = [];
+      directions[s.direction].push(s);
+    }
+    for (const [dir, sells] of Object.entries(directions)) {
+      const color = poolColors[colorIdx % poolColors.length];
+      datasets.push({
+        label: `${pool.pool} (${dir})`,
+        data: sells.map(s => s.impactPct),
+        borderColor: color,
+        backgroundColor: 'transparent',
+        tension: 0.3,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        borderWidth: 2,
+      });
+      colorIdx++;
+    }
+  }
+
+  chartInstances['impact-chart'] = new Chart(canvas, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          position: 'top',
+          labels: { color: c.text, font: { family: "'Poppins', sans-serif", size: 10 }, boxWidth: 10, padding: 10 },
+        },
+        tooltip: {
+          backgroundColor: 'rgba(18,18,28,0.95)',
+          borderColor: c.border,
+          borderWidth: 1,
+          titleColor: '#F0F0F5',
+          bodyColor: '#A0A0B8',
+          callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtPct(ctx.raw) },
+        },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Trade Size (USD)', color: c.muted, font: { family: "'Poppins', sans-serif", size: 11 } },
+          grid: { color: c.grid },
+          ticks: { color: c.muted, font: { family: "'Poppins', sans-serif", size: 10 } },
+        },
+        y: {
+          title: { display: true, text: 'Price Impact %', color: c.muted, font: { family: "'Poppins', sans-serif", size: 11 } },
+          grid: { color: c.grid },
+          ticks: { color: c.muted, font: { family: "'Poppins', sans-serif", size: 10 }, callback: v => fmtPct(v) },
+        },
+      },
+    },
+  });
+}
+
+// ── Ticker ──────────────────────────────────────────────────────────────────
+function updateTicker() {
+  if (!DATA) return;
+  const track = document.getElementById('ticker-track');
+  if (!track) return;
+
+  let items = [];
+
+  // BTC Price
+  items.push(`<span class="ticker-item"><span class="symbol">BTC</span><span class="price">${fmtUsd(DATA.btcPrice?.usd)}</span></span>`);
+  items.push(`<span class="ticker-sep">&middot;</span>`);
+
+  // Token prices
+  for (const [sym, token] of Object.entries(DATA.tokens || {})) {
+    if (token.error) continue;
+    items.push(`<span class="ticker-item"><span class="symbol">${sym}</span><span class="price">${fmtUsd(token.priceUsd)}</span><span class="btc-price">(${fmtBtc(token.priceBtc)})</span></span>`);
+    items.push(`<span class="ticker-sep">&middot;</span>`);
+  }
+
+  // TVL
+  items.push(`<span class="ticker-item"><span class="symbol">TVL</span><span class="price">${fmtUsd(DATA.tvl?.total?.usd)}</span></span>`);
+  items.push(`<span class="ticker-sep">&middot;</span>`);
+
+  // Pool TVLs
+  for (const pool of (DATA.pools || [])) {
+    if (pool.error) continue;
+    items.push(`<span class="ticker-item"><span class="symbol">${pool.pairLabel}</span><span class="price">${fmtUsd(pool.tvlUsd)}</span></span>`);
+    items.push(`<span class="ticker-sep">&middot;</span>`);
+  }
+
+  // Duplicate for seamless scroll
+  const content = items.join('');
+  track.innerHTML = content + content;
+}
+
+// ── Status Banner ───────────────────────────────────────────────────────────
+function updateStatus(isLive) {
+  const banner = document.getElementById('status-banner');
+  if (!banner) return;
+  if (isLive && DATA) {
+    banner.className = 'status-banner status-banner--live';
+    banner.innerHTML = `<span class="pulse-dot"></span> Live &middot; Block #${fmtFull(DATA.chain?.blockNumber)} &middot; Updated ${fmtTime(DATA.lastUpdated)}`;
+  } else {
+    banner.className = 'status-banner status-banner--loading';
+    banner.innerHTML = `<span class="pulse-dot"></span> Loading data...`;
+  }
+}
+
+// ── Loading Progress ─────────────────────────────────────────────────────────
+let loadingProgress = 0;
+let loadingInterval = null;
+let isFirstLoad = true;
+
+function startLoadingProgress() {
+  const overlay = document.getElementById('loading-overlay');
+  const fill = document.getElementById('loading-fill');
+  const status = document.getElementById('loading-status');
+  if (!overlay || !fill) return;
+
+  if (!isFirstLoad) return; // Only show overlay on first load
+
+  loadingProgress = 0;
+  overlay.classList.remove('hidden');
+
+  const stages = [
+    { pct: 10, text: 'Connecting to OPNet RPC...' },
+    { pct: 25, text: 'Discovering tokens and pools...' },
+    { pct: 40, text: 'Fetching NativeSwap oracle prices...' },
+    { pct: 55, text: 'Computing pool reserves and TVL...' },
+    { pct: 70, text: 'Analyzing staking and farming...' },
+    { pct: 82, text: 'Running arbitrage analysis...' },
+    { pct: 90, text: 'Computing price impact curves...' },
+    { pct: 95, text: 'Finalizing data...' },
+  ];
+  let stageIdx = 0;
+
+  loadingInterval = setInterval(() => {
+    if (stageIdx < stages.length) {
+      loadingProgress = stages[stageIdx].pct;
+      fill.style.width = loadingProgress + '%';
+      if (status) status.textContent = stages[stageIdx].text;
+      stageIdx++;
+    }
+  }, 2500);
+}
+
+function stopLoadingProgress() {
+  const overlay = document.getElementById('loading-overlay');
+  const fill = document.getElementById('loading-fill');
+  const status = document.getElementById('loading-status');
+  if (loadingInterval) { clearInterval(loadingInterval); loadingInterval = null; }
+  if (fill) fill.style.width = '100%';
+  if (status) status.textContent = 'Data loaded!';
+  setTimeout(() => {
+    if (overlay) overlay.classList.add('hidden');
+    isFirstLoad = false;
+  }, 400);
+}
+
+// ── Data Fetching ───────────────────────────────────────────────────────────
+async function fetchData() {
+  if (isFirstLoad) startLoadingProgress();
+  try {
+    const [dataRes, historyRes] = await Promise.all([
+      fetch('/api/data'),
+      fetch('/api/history?limit=200'),
+    ]);
+    DATA = await dataRes.json();
+    HISTORY = await historyRes.json();
+
+    stopLoadingProgress();
+    updateStatus(true);
+    updateTicker();
+    render();
+
+    const footerEl = document.getElementById('footer-update');
+    if (footerEl) footerEl.textContent = 'Last updated: ' + fmtTime(DATA.lastUpdated);
+  } catch (e) {
+    console.error('Fetch error:', e);
+    // If no data yet, load demo data for static deployments (Vercel)
+    if (!DATA) {
+      DATA = getMotoScopeDemoData();
+      HISTORY = [];
+      stopLoadingProgress();
+      render();
+      const banner = document.getElementById('status-banner');
+      if (banner) {
+        banner.className = 'status-banner status-banner--loading';
+        banner.innerHTML = '<span class="pulse-dot"></span> DEMO MODE - Showing sample data. Run server.mjs locally for live analytics.';
+      }
+    } else {
+      updateStatus(false);
+    }
+    if (isFirstLoad) {
+      setTimeout(fetchData, 5000);
+    }
+  }
+}
+
+function getMotoScopeDemoData() {
+  return {
+    chain: { blockNumber: 37153, network: 'regtest' },
+    btcPrice: 65564,
+    tvl: { total: 23187624, byPool: {
+      'MOTO/PILL': { tvlUsd: 3004294, token0: 'MOTO', token1: 'PILL', token0Amount: 1945940, token1Amount: 118478577 },
+      'MOTO/ODYS': { tvlUsd: 16912309, token0: 'MOTO', token1: 'ODYS', token0Amount: 10878550, token1Amount: 56912522 },
+      'ODYS/PILL': { tvlUsd: 3271021, token0: 'ODYS', token1: 'PILL', token0Amount: 7261657, token1Amount: 92857005 },
+    }},
+    pools: [
+      { pairLabel: 'MOTO/PILL', token0Symbol: 'MOTO', token1Symbol: 'PILL', tvlUsd: 3004294, priceRatio: 60.89, reserve0Num: 1945940, reserve1Num: 118478577 },
+      { pairLabel: 'MOTO/ODYS', token0Symbol: 'MOTO', token1Symbol: 'ODYS', tvlUsd: 16912309, priceRatio: 5.23, reserve0Num: 10878550, reserve1Num: 56912522 },
+      { pairLabel: 'ODYS/PILL', token0Symbol: 'ODYS', token1Symbol: 'PILL', tvlUsd: 3271021, priceRatio: 12.79, reserve0Num: 7261657, reserve1Num: 92857005 },
+    ],
+    prices: { MOTO: { usd: 0.426 }, PILL: { usd: 0.0184 }, ODYS: { usd: 0.216 } },
+    lastUpdated: Date.now() - 30000,
+  };
+}
+
+// ── Init ────────────────────────────────────────────────────────────────────
+window.addEventListener('hashchange', () => {
+  render();
+  updateNav();
+});
+
+fetchData();
+setInterval(fetchData, 30000);
+</script>
+</body>
+</html>
