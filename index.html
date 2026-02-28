@@ -827,20 +827,32 @@ td, input[type="number"] {
     </div>
     <div class="wallet-details">
       <div class="deposit-section">
-        <div>
+        <!-- TOKEN DEPOSITS: ML-DSA KEY -->
+        <div style="padding:12px 14px;background:rgba(234,179,8,0.04);border:1.5px solid rgba(234,179,8,0.2);border-radius:var(--radius-sm);margin-bottom:10px;">
           <div class="deposit-row" style="margin-bottom:6px;">
-            <span class="deposit-label" style="color:var(--yellow);">OP20 Tokens</span>
-            <span style="font-size:0.65rem;color:var(--text-muted);">ML-DSA Public Key (<span id="mldsa-size">--</span> bytes)</span>
-            <button class="btn btn-sm" style="background:rgba(234,179,8,0.15);border-color:rgba(234,179,8,0.3);color:var(--yellow);margin-left:auto;" onclick="copyMldsaKey()">Copy Key</button>
+            <span class="deposit-label" style="color:var(--yellow);font-size:0.78rem;font-weight:700;">SEND TOKENS HERE</span>
+            <span style="font-size:0.62rem;color:var(--text-muted);">ML-DSA Key &middot; <span id="mldsa-size">--</span> bytes</span>
+            <button class="btn btn-sm" style="background:rgba(234,179,8,0.15);border-color:rgba(234,179,8,0.3);color:var(--yellow);margin-left:auto;font-weight:700;" onclick="copyMldsaKey()">Copy Key</button>
           </div>
           <div id="mldsa-key-display" class="mldsa-display" onclick="copyMldsaKey()">--</div>
-          <div class="deposit-hint" style="margin-top:4px;">To deposit OP20 tokens: copy this ML-DSA key, open OP_WALLET, and paste it (with 0x prefix) as the recipient address when sending tokens</div>
+          <div class="deposit-hint" style="margin-top:6px;color:var(--yellow);font-weight:600;font-size:0.72rem;">
+            Paste this key (with 0x prefix) as the RECIPIENT in OP_WALLET when sending MOTO, PILL, or ODYS.
+          </div>
+          <div class="deposit-hint" style="margin-top:2px;font-size:0.68rem;">
+            Do NOT use the BTC address below for tokens. OP_WALLET requires the ML-DSA key, not a bc1 address.
+          </div>
         </div>
-        <div class="deposit-row">
-          <span class="deposit-label">BTC (Gas)</span>
-          <span class="wallet-addr" id="addr-p2tr" onclick="copyAddr('p2tr')" style="font-size:0.72rem;flex:1;">--</span>
-          <button class="btn btn-sm btn-success" onclick="copyAddr('p2tr')">Copy</button>
+
+        <!-- BTC GAS: P2TR ADDRESS -->
+        <div style="padding:10px 14px;background:rgba(34,197,94,0.03);border:1px solid rgba(34,197,94,0.12);border-radius:var(--radius-sm);margin-bottom:10px;">
+          <div class="deposit-row" style="margin-bottom:4px;">
+            <span class="deposit-label" style="color:var(--green);font-size:0.72rem;">BTC ONLY (gas fees)</span>
+            <button class="btn btn-sm btn-success" style="margin-left:auto;" onclick="copyAddr('p2tr')">Copy Address</button>
+          </div>
+          <span class="wallet-addr" id="addr-p2tr" onclick="copyAddr('p2tr')" style="font-size:0.7rem;word-break:break-all;">--</span>
+          <div class="deposit-hint" style="margin-top:4px;font-size:0.65rem;">This P2TR address is for raw BTC only. Sending tokens here will not work.</div>
         </div>
+
         <div style="text-align:right;">
           <button class="btn btn-sm" onclick="revealPubKey()">Reveal Key + Split UTXOs</button>
         </div>
