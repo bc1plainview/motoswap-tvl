@@ -830,6 +830,55 @@ let sessionStartBalances = null;
 let repeatCount = 1;
 let execElapsedTimer = null;
 
+// ── Remote Bot Connection ────────────────────────────────────────────────────
+// API_BASE: empty = same origin (local), or a remote URL like 'http://myserver:3004'
+let API_BASE = '';
+let isDemoMode = false;
+
+(function initApiBase() {
+  const saved = localStorage.getItem('motoarb-bot-url');
+  if (saved) {
+    API_BASE = saved.replace(/\/+$/, ''); // strip trailing slash
+  } else if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    // On a remote host (Vercel etc) with no saved URL — will enter demo mode on first fetch fail
+    API_BASE = '';
+  }
+})();
+
+async function connectBot(url) {
+  if (!url) { toast('Enter a bot URL', 'error'); return; }
+  url = url.replace(/\/+$/, '');
+  try {
+    const r = await fetch(url + '/api/status', { signal: AbortSignal.timeout(5000) });
+    const data = await r.json();
+    if (data.wallet) {
+      API_BASE = url;
+      isDemoMode = false;
+      localStorage.setItem('motoarb-bot-url', url);
+      DATA = data;
+      render();
+      updateBanner();
+      updateWalletBar();
+      toast('Connected to bot at ' + url, 'success');
+      return true;
+    }
+  } catch(e) {
+    toast('Cannot reach bot at ' + url + ' — ' + e.message, 'error');
+  }
+  return false;
+}
+
+function disconnectBot() {
+  API_BASE = '';
+  localStorage.removeItem('motoarb-bot-url');
+  isDemoMode = true;
+  DATA = getDemoData();
+  render();
+  updateBanner();
+  updateWalletBar();
+  toast('Disconnected from bot', 'info');
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // FORMATTERS (preserved logic)
 // ══════════════════════════════════════════════════════════════════════════════
@@ -952,8 +1001,9 @@ function capTri(t) {
 // ══════════════════════════════════════════════════════════════════════════════
 async function fetchStatus() {
   try {
-    const r = await fetch('/api/status');
+    const r = await fetch(API_BASE + '/api/status', { signal: AbortSignal.timeout(8000) });
     DATA = await r.json();
+    isDemoMode = false;
     // Track balance history for sparklines
     for (const sym of ['BTC','MOTO','PILL','ODYS']) {
       const val = DATA.balances?.[sym] || 0;
@@ -970,6 +1020,7 @@ async function fetchStatus() {
     }
     return DATA;
   } catch(e) {
+    isDemoMode = true;
     // If bot is offline and we have no data yet, load demo data for static deployments (Vercel)
     if (!DATA) {
       DATA = getDemoData();
@@ -983,7 +1034,10 @@ async function fetchStatus() {
     }
     const b = document.getElementById('status-banner');
     b.className = 'status-banner status-banner--demo';
-    b.innerHTML = '<span class="pulse-dot" style="background:var(--yellow);"></span> DEMO MODE - Showing sample data. Run the bot locally for live trading.';
+    const connectHtml = API_BASE
+      ? `<span class="pulse-dot" style="background:var(--yellow);"></span> BOT OFFLINE at ${API_BASE} &mdash; <a href="#" onclick="disconnectBot();return false;" style="color:var(--yellow);text-decoration:underline;">disconnect</a>`
+      : `<span class="pulse-dot" style="background:var(--yellow);"></span> NO BOT CONNECTED &mdash; Enter your bot URL below to trade live`;
+    b.innerHTML = connectHtml;
     if (firstLoad) {
       setTimeout(() => fetchStatus(), 5000);
     }
@@ -1067,9 +1121,10 @@ function updateWalletBar() {
   }
 }
 async function revealPubKey() {
+  if (isDemoMode) return toast('Connect to a bot first (enter URL in Config section)', 'error');
   toast('Revealing public key + splitting UTXOs...', 'info');
   try {
-    const resp = await fetch('/api/reveal', { method: 'POST' });
+    const resp = await fetch(API_BASE + '/api/reveal', { method: 'POST' });
     const data = await resp.json();
     if (data.ok) toast('Public key revealed! Tokens can now be sent.', 'success');
     else toast('Reveal failed: ' + (data.error || 'Unknown'), 'error');
@@ -1077,13 +1132,15 @@ async function revealPubKey() {
   await fetchStatus();
 }
 async function triggerScan() {
+  if (isDemoMode) return toast('Connect to a bot first (enter URL in Config section)', 'error');
   toast('Scanning MotoScope...', 'info');
-  await fetch('/api/scan', { method: 'POST' });
+  await fetch(API_BASE + '/api/scan', { method: 'POST' });
   setTimeout(fetchStatus, 2000);
 }
 async function refreshBal() {
+  if (isDemoMode) return toast('Connect to a bot first (enter URL in Config section)', 'error');
   toast('Refreshing balances...', 'info');
-  await fetch('/api/balances');
+  await fetch(API_BASE + '/api/balances');
   await fetchStatus();
   toast('Balances updated', 'success');
 }
@@ -1123,12 +1180,13 @@ function copyField(field, elId, prefix) {
   setTimeout(() => { el.classList.remove('copied'); el.textContent = original; }, 1500);
 }
 async function executeArb(poolAddress) {
+  if (isDemoMode) return toast('Connect to a bot first (enter URL in Config section)', 'error');
   if (executing) return toast('Already executing', 'error');
   executing = true;
   toast('Executing direct arbitrage...', 'info');
   startFastPoll();
   try {
-    const r = await fetch('/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({poolAddress}) });
+    const r = await fetch(API_BASE + '/api/execute', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({poolAddress}) });
     const trade = await r.json();
     if (trade.error) toast('Trade failed: ' + trade.error, 'error');
     else if (trade.status === 'completed') toast('Trade completed! P&L: ' + fmtUsd(trade.actualProfit), 'success');
@@ -1139,12 +1197,13 @@ async function executeArb(poolAddress) {
   await fetchStatus();
 }
 async function executeTriArb(label) {
+  if (isDemoMode) return toast('Connect to a bot first (enter URL in Config section)', 'error');
   if (executing) return toast('Already executing', 'error');
   executing = true;
   toast('Executing triangular arb: ' + label, 'info');
   startFastPoll();
   try {
-    const r = await fetch('/api/execute-tri', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({label}) });
+    const r = await fetch(API_BASE + '/api/execute-tri', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({label}) });
     const trade = await r.json();
     if (trade.error) toast('Tri-arb failed: ' + trade.error, 'error');
     else if (trade.status === 'completed') toast('Tri-arb complete! P&L: ' + fmtUsd(trade.actualProfit), 'success');
@@ -1155,25 +1214,28 @@ async function executeTriArb(label) {
   await fetchStatus();
 }
 async function updateConfig(field, value) {
-  await fetch('/api/config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({[field]: value}) });
+  if (isDemoMode) return toast('Connect to a bot first', 'error');
+  await fetch(API_BASE + '/api/config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({[field]: value}) });
 }
 async function fetchRoutes() {
+  if (isDemoMode) { smartRoutes = []; return; }
   routesLoading = true;
   try {
-    const r = await fetch('/api/routes');
+    const r = await fetch(API_BASE + '/api/routes');
     const data = await r.json();
     smartRoutes = data.routes || [];
   } catch(e) { smartRoutes = []; }
   routesLoading = false;
 }
 async function executeSmartSwap(routeLabel) {
+  if (isDemoMode) return toast('Connect to a bot first (enter URL in Config section)', 'error');
   if (executing) return toast('Already executing', 'error');
   executing = true;
   const label = routeLabel || (smartRoutes[0]?.label);
   toast('Smart swap: ' + (label || 'best route') + '...', 'info');
   startFastPoll();
   try {
-    const r = await fetch('/api/smart-swap', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ route: routeLabel || null }) });
+    const r = await fetch(API_BASE + '/api/smart-swap', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ route: routeLabel || null }) });
     const trade = await r.json();
     if (trade.error) toast('Swap failed: ' + trade.error, 'error');
     else if (trade.status === 'completed') toast('Swap complete! MOTO gained: ' + fmtNum(trade.netTokenDelta||0,4), 'success');
@@ -1186,13 +1248,14 @@ async function executeSmartSwap(routeLabel) {
 }
 
 async function executeRepeat() {
+  if (isDemoMode) return toast('Connect to a bot first (enter URL in Config section)', 'error');
   if (executing) return toast('Already executing', 'error');
   const count = Math.max(1, Math.min(20, repeatCount));
   executing = true;
   toast(`Starting repeat: ${count} trades...`, 'info');
   startFastPoll();
   try {
-    const r = await fetch('/api/repeat-swap', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ count }) });
+    const r = await fetch(API_BASE + '/api/repeat-swap', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ count }) });
     const data = await r.json();
     if (data.error) {
       toast('Repeat failed: ' + data.error, 'error');
@@ -1376,8 +1439,9 @@ function render() {
   // Fetch routes in background (don't block render)
   if (!routesLoading) fetchRoutes();
   const app = document.getElementById('app');
-  app.innerHTML = [
+  const sections = [
     renderHero(),
+    isDemoMode ? renderConfig() : '', // Show connection panel prominently when not connected
     renderPnl(),
     renderExecution(),
     renderQuickGuide(),
@@ -1386,8 +1450,9 @@ function render() {
     renderOpportunities(),
     renderTradeHistory(),
     renderStrategy(),
-    renderConfig(),
-  ].join('');
+    isDemoMode ? '' : renderConfig(), // Show config at bottom when connected
+  ];
+  app.innerHTML = sections.join('');
 
   initCharts();
   initSparklines();
@@ -2307,10 +2372,44 @@ function renderStrategy() {
 // ══════════════════════════════════════════════════════════════════════════════
 function renderConfig() {
   const c = DATA.config || {};
+  const connected = !isDemoMode && API_BASE;
+  const savedUrl = API_BASE || '';
   return `
   <div class="section reveal">
+    <!-- Bot Connection Panel -->
+    <div class="config-panel bot-connect-panel" style="position:relative;margin-bottom:16px;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Bot Connection</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${isDemoMode ? 'var(--yellow)' : 'var(--green)'};box-shadow:0 0 8px ${isDemoMode ? 'rgba(234,179,8,0.6)' : 'rgba(34,197,94,0.6)'};flex-shrink:0;"></div>
+        <span style="font-size:0.82rem;font-weight:600;color:${isDemoMode ? 'var(--yellow)' : 'var(--green)'};">
+          ${isDemoMode ? 'Not Connected — Demo Mode' : 'Connected to Bot'}
+        </span>
+      </div>
+      ${isDemoMode ? `
+      <div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px;line-height:1.5;">
+        Enter the URL of a running MotoArb bot to execute real trades. The bot owner shares their URL with you, or run your own with <code style="background:var(--bg-elevated);padding:2px 6px;border-radius:4px;font-size:0.75rem;">node arb-bot.mjs</code>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="bot-url-input" placeholder="http://your-server:3004" value="${savedUrl}"
+          style="flex:1;background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:8px 12px;color:var(--text-primary);font-size:0.82rem;font-family:inherit;outline:none;transition:border-color 0.2s;"
+          onfocus="this.style.borderColor='var(--primary-light)'" onblur="this.style.borderColor='var(--border-color)'"
+          onkeydown="if(event.key==='Enter')document.getElementById('connect-btn').click()">
+        <button id="connect-btn" onclick="connectBot(document.getElementById('bot-url-input').value)"
+          style="background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border:none;border-radius:var(--radius-sm);padding:8px 20px;font-weight:700;font-size:0.82rem;cursor:pointer;white-space:nowrap;transition:opacity 0.2s;font-family:inherit;"
+          onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Connect</button>
+      </div>
+      ` : `
+      <div style="display:flex;align-items:center;gap:8px;justify-content:space-between;">
+        <code style="font-size:0.78rem;color:var(--text-secondary);background:var(--bg-elevated);padding:4px 10px;border-radius:var(--radius-sm);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${API_BASE || 'localhost (same origin)'}</code>
+        <button onclick="disconnectBot()" style="background:transparent;border:1px solid var(--border-color);color:var(--text-muted);border-radius:var(--radius-sm);padding:6px 14px;font-size:0.75rem;cursor:pointer;font-family:inherit;transition:all 0.2s;"
+          onmouseover="this.style.borderColor='var(--red)';this.style.color='var(--red)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-muted)'">Disconnect</button>
+      </div>
+      `}
+    </div>
+
+    <!-- Trading Config -->
     <div class="config-panel" style="position:relative;">
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Config</div>
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Trading Config</div>
       <div class="config-field">
         <label>Slippage %</label>
         <input type="number" value="${c.slippagePct||2}" min="0.1" max="50" step="0.1" onchange="updateConfig('slippagePct', this.value)">
